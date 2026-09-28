@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.tcballard.familiar-desktop",
+  "name": "Familiar Desktop",
+  "version": "0.1.0-dev",
+  "author": "Tom Ballard and rosakodu",
+  "license": "MIT",
+  "description": "Mouse-friendly app and window navigation with General, Windows, and Mac starting layouts for Omarchy Quattro.",
+  "kinds": [
+    "service",
+    "bar-widget"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "service": "DockPanel.qml",
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Familiar Desktop",
+    "description": "Choose a layout and configure the app dock",
+    "category": "System",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}
