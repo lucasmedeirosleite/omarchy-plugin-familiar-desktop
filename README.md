@@ -8,11 +8,13 @@
 
 Familiar Desktop adds a mouse-friendly app dock to Omarchy Quattro. Launch or return to an app with a click; right-click to see its open windows by name and choose exactly where to go. General, Windows and Mac starting layouts share your pinned apps, so you can choose what feels comfortable and adjust it later.
 
-*Preview pending: an on-device screenshot of Familiar Desktop on Omarchy.*
+![Familiar Desktop running on Omarchy, with the General layout selected, dock settings open and the app dock along the bottom](docs/images/familiar-desktop.png)
+
+*Familiar Desktop on Omarchy: the General starting layout and dock settings.*
 
 ## Install
 
-This is an **early development build**. It has passed portable validation, but the interface has not yet been tested on a live Omarchy desktop. If you want to try it on Omarchy Quattro with plugin support, review the source and run:
+This is an **early development build**. It has passed portable validation, and the screenshot above shows it running on an Omarchy desktop. Broader live testing is still pending. If you want to try it on Omarchy Quattro with plugin support, review the source and run:
 
 ```bash
 omarchy plugin add https://github.com/tcballard/omarchy-plugin-familiar-desktop.git --enable
