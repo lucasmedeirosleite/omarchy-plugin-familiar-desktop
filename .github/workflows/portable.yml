@@ -1,0 +1,30 @@
+name: Portable checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: tests/run
+      - name: Install Qt test runner
+        run: sudo apt-get update && sudo apt-get install -y qt6-declarative-dev-tools qml6-module-qttest qml6-module-qtquick qml6-module-qtquick-window qml6-module-qtqml-workerscript
+      - name: Run QML unit tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+          QT_QUICK_BACKEND: software
+        run: /usr/lib/qt6/bin/qmltestrunner -input tests
+      - name: Parse plugin QML
+        run: |
+          for file in *.qml components/*.qml; do
+            /usr/lib/qt6/bin/qmlformat "$file" > /dev/null
+          done

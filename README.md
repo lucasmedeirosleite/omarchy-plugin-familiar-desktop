@@ -14,13 +14,15 @@ Familiar Desktop adds a mouse-friendly app dock to Omarchy Quattro. Launch or re
 
 ## Install
 
-This is an **early development build**. It has passed portable validation, and the screenshot above shows it running on an Omarchy desktop. Broader live testing is still pending. If you want to try it on Omarchy Quattro with plugin support, review the source and run:
+This is an **early development build**. It has passed portable validation, and the screenshot above shows it running on an Omarchy desktop. Broader live testing is still pending. It needs Omarchy Quattro with plugin support, Hyprland, Quickshell, Python 3 and `hyprctl`. If you want to try it, review the source and run:
 
 ```bash
 omarchy plugin add https://github.com/tcballard/omarchy-plugin-familiar-desktop.git --enable
 ```
 
 The plugin adds a **Familiar Desktop** control to the bar. Open it to choose a starting layout and adjust dock settings. If you already use another dock, disable it before enabling this one so the two do not occupy the same edge.
+
+Launching apps uses Omarchy's app launcher, with `uwsm-app` and `gtk-launch` as fallbacks. Supported command-line apps use `foot`; copying the shortcut uses `wl-copy`. Audio controls use `wpctl`. These integrations use the corresponding tools already installed on Omarchy. The plugin reads local app entries, window information, theme settings and notification counts. It launches apps and Omarchy actions when requested; it has no account login or built-in network client.
 
 ## Made for everyday use
 
@@ -64,18 +66,22 @@ omarchy plugin update io.github.tcballard.familiar-desktop
 omarchy plugin remove io.github.tcballard.familiar-desktop
 ```
 
-The plugin owns `~/.config/omarchy/familiar-desktop-settings.json` and `~/.config/omarchy/familiar-desktop-pinned.json`. Removing it leaves those preferences in place; it does not alter the original dock's configuration. It does not install the [Familiar theme](https://github.com/tcballard/omarchy-theme-familiar), Task Manager or OmaStore.
+The plugin writes `~/.config/omarchy/familiar-desktop-settings.json`, `~/.config/omarchy/familiar-desktop-pinned.json` and `~/.local/state/omarchy/familiar-desktop-badges.json`. Removing it leaves these preferences and badge data in place. Dock widgets appear alongside existing bar widgets. Dock settings only change Familiar Desktop; `shell.json` is read for bar placement and is never written by this plugin. Switching dock widgets off preserves your selection for when you turn them back on. It does not install the [Familiar theme](https://github.com/tcballard/omarchy-theme-familiar), Task Manager or OmaStore.
+
+If you moved bar widgets into the dock using an earlier development build, add them back through Omarchy's bar settings. This build preserves old placement metadata in its settings file but does not automatically rewrite your bar layout.
 
 ## Development and status
 
 The manifest declares a hosted service and bar widget under `io.github.tcballard.familiar-desktop`. The source derives from [rosakodu/omarchy-dock](https://github.com/rosakodu/omarchy-dock) at commit `467070386fe60e173295020d3911176202b3e0c9` (MIT). This project has separate identity and settings while retaining that dock's window, monitor, folder and theme handling. See [the product record](PRODUCT.md) for the current scope and next milestones.
 
-Portable plugin validation and 26 Python window-helper tests pass. Live checks remain: initial load, preset switching, menu focus and dismissal, minimized windows, two monitors, workspace changes, light and dark themes, 200% scale, shell reload and removal. This repository has no release or marketplace verification yet.
+Portable plugin validation and the tests in `tests/run` pass. The preview shows an on-device layout, but live checks remain: initial installation, preset switching, menu focus and dismissal, minimized windows, two monitors, workspace changes, light and dark themes, 200% scale, shell reload, dock widget persistence and removal. This repository has no release or marketplace verification yet. Report bugs through [GitHub issues](https://github.com/tcballard/omarchy-plugin-familiar-desktop/issues); report sensitive security issues privately through the repository's GitHub security advisory feature.
 
 On Omarchy, validate and test the checkout with:
 
 ```bash
 omarchy plugin validate .
 ```
+
+See [validation notes](docs/VALIDATION.md) for automated coverage, the preview source and the remaining desktop checks.
 
 MIT licensed. Original work © 2026 rosakodu; Familiar Desktop changes © 2026 Tom Ballard. See [LICENSE](LICENSE).
