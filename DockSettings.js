@@ -19,10 +19,10 @@ function normalizeProfile(value) {
 function profileDefaults(value) {
     var profile = normalizeProfile(value)
     if (profile === PROFILE_WINDOWS)
-        return { visibilityMode: VISIBILITY_ALWAYS, overlayMode: false }
+        return { visibilityMode: VISIBILITY_ALWAYS, overlayMode: false, titlebarStyle: "windows" }
     if (profile === PROFILE_MAC)
-        return { visibilityMode: VISIBILITY_HOVER, overlayMode: true }
-    return { visibilityMode: VISIBILITY_ALWAYS, overlayMode: false }
+        return { visibilityMode: VISIBILITY_HOVER, overlayMode: true, titlebarStyle: "mac" }
+    return { visibilityMode: VISIBILITY_ALWAYS, overlayMode: false, titlebarStyle: "windows" }
 }
 
 var VISIBILITY_OVERRIDE_HIDDEN = -1
@@ -64,10 +64,23 @@ function normalize(raw) {
     var settings = raw && typeof raw === "object" ? raw : {}
     return {
         profile: normalizeProfile(settings.profile),
+        titlebarsEnabled: settings.titlebarsEnabled === true,
+        titlebarMode: normalizeTitlebarMode(settings),
+        titlebarStyle: settings.titlebarStyle === "mac" ? "mac" : "windows",
+        titlebarExclusions: typeof settings.titlebarExclusions === "string" ? settings.titlebarExclusions.slice(0, 6400) : "",
         visibilityMode: normalizeVisibilityMode(settings.visibilityMode, settings.autohide),
         overlayMode: normalizeOverlayMode(settings.overlayMode, settings.spaceMode),
         visibleWorkspace: normalizeVisibleWorkspace(settings.visibleWorkspace)
     }
+}
+
+function normalizeTitlebarMode(settings) {
+    var mode = settings.titlebarMode
+    if (["theme", "off", "mac", "windows"].indexOf(mode) !== -1) return mode
+    // Migrate an explicit choice from the first title-bar implementation.
+    if (settings.titlebarsEnabled !== undefined)
+        return settings.titlebarsEnabled === true ? (settings.titlebarStyle === "mac" ? "mac" : "windows") : "off"
+    return "theme"
 }
 
 function legacyAutohide(visibilityMode) {

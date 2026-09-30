@@ -11,6 +11,8 @@ TestCase {
         compare(settings.visibilityMode, "always")
         compare(settings.overlayMode, false)
         compare(settings.visibleWorkspace, "all")
+        compare(settings.titlebarsEnabled, false)
+        compare(settings.titlebarMode, "theme")
     }
 
     function test_profilePresetsPreserveIndependentWidgetChoices() {
@@ -22,8 +24,25 @@ TestCase {
         compare(win.overlayMode, false)
         compare(mac.visibilityMode, "hover")
         compare(mac.overlayMode, true)
+        compare(win.titlebarStyle, "windows")
+        compare(mac.titlebarStyle, "mac")
         verify(win.widgetsEnabled === undefined)
         verify(mac.widgetsEnabled === undefined)
+    }
+
+    function test_titlebarSettingsMigrateAndRejectInvalidValues() {
+        var defaults = DockSettings.normalize({ titlebarsEnabled: "true", titlebarStyle: "bad", titlebarExclusions: {} })
+        compare(defaults.titlebarsEnabled, false)
+        compare(defaults.titlebarMode, "off")
+        compare(defaults.titlebarStyle, "windows")
+        compare(defaults.titlebarExclusions, "")
+        var settings = DockSettings.normalize({ titlebarsEnabled: true, titlebarStyle: "mac", titlebarExclusions: "kitty" })
+        compare(settings.titlebarsEnabled, true)
+        compare(settings.titlebarStyle, "mac")
+        compare(settings.titlebarExclusions, "kitty")
+        compare(settings.titlebarMode, "mac")
+        compare(DockSettings.normalize({ titlebarMode: "theme", titlebarsEnabled: false }).titlebarMode, "theme")
+        compare(DockSettings.normalize({ titlebarMode: "off", titlebarsEnabled: true }).titlebarMode, "off")
     }
 
     function test_legacyAutohideMigration_data() {

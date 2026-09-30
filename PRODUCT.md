@@ -15,9 +15,11 @@ should answer: what is open, which window is mine, and how do I get back to it?
 - Settings: plugin-owned JSON in `~/.config/omarchy/`; pins are separate and
   shared by all three presets. Dock widgets leave the bar layout unchanged;
   `~/.config/omarchy/shell.json` is read-only.
-  The plugin does not modify themes, global bar position, shortcuts, or install packages.
-- External operations: the inherited `scripts/dock-minimize.py` uses
-  `hyprctl` for window activation and minimization; inherited icon/CLI scans
+  The hosted runtime does not modify themes, global bar position or shortcuts,
+  or install packages. Optional title-bar dependency setup is an explicit
+  terminal operation, described below.
+- External operations: the shared Rust `bin/familiar-desktop` backend uses
+  `hyprctl` for window activation and minimization, title-bar setup, policy and actions; icon/CLI scans
   use local desktop files. No network calls or privileged commands are added.
 - IPC: existing dock methods plus `setProfile general|windows|mac`.
 - Disable/remove: hosted surfaces disappear; plugin settings and pins persist.
@@ -49,5 +51,23 @@ and Windows names denote layout starting points, not pixel-perfect emulation.
 
 Portable manifest/path validation and unit tests pass. An on-device screenshot
 of the General layout is in the README. The audit environment has no Omarchy
-session, Quickshell imports, or QML runner, so lifecycle behavior is unverified
+session or Quickshell imports, so lifecycle behavior is unverified
 here. The public GitHub repository exists; no release has been created.
+
+
+## Integrated window controls
+
+Familiar remains one Omarchy plugin. Optional Hyprbars decorations provide a
+visible window title and mouse controls, Mac/Windows placement, dragging and
+double-click maximise. Minimise and restore share the existing dock helper.
+Controls inherit shell background/text colours and fonts. Theme mode reads
+`familiar-desktop.json` from the active theme for enablement, placement, geometry,
+button colours and exclusions; explicit Off/Mac/Windows choices take precedence.
+Theme switches and local policy edits queue serialized refreshes. Invalid policy
+fails closed. The Familiar theme provides Windows defaults for desktop tuning.
+A terminal installer owns the one-time dependency/config setup; runtime QML
+only reconciles local configuration. One-time dependency setup remains required.
+Existing explicit choices are preserved; other installations default to Theme.
+Title bars require
+live Hyprland verification before release, especially grouping, CSD apps,
+fullscreen, mixed scales, upgrade and removal behaviour.

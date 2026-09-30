@@ -35,7 +35,7 @@ for (const filename of ['DockPanel.qml', 'BarWidget.qml']) {
   const source = fs.readFileSync(filename, 'utf8');
   const indent = filename === 'DockPanel.qml' ? '    ' : '  ';
   const root = { isSavingSettings: false, widgetsEnabled: false, dockWidgets: selection.slice() };
-  let disk = JSON.stringify({ widgetsEnabled: false, dockWidgets: selection });
+  let disk = JSON.stringify({ widgetsEnabled: false, dockWidgets: selection, titlebarsEnabled: true, titlebarStyle: "mac", titlebarExclusions: "org.gnome.Nautilus,kitty" });
   const context = {
     root, DockSettings: settings, DockModel: widgets, DockWidgets: widgets,
     settingsFile: { text: () => disk, setText: value => { disk = value; } },
@@ -50,12 +50,25 @@ for (const filename of ['DockPanel.qml', 'BarWidget.qml']) {
   }
   context.readSettings();
   assert.equal(root.widgetsEnabled, false);
+  assert.equal(root.titlebarsEnabled, true);
+  assert.equal(root.titlebarStyle, "mac");
+  assert.equal(root.titlebarMode, "mac");
+  assert.equal(root.titlebarExclusions, "org.gnome.Nautilus,kitty");
   assert.deepEqual(plain(root.dockWidgets), selection);
   context.saveSettings();
   assert.deepEqual(JSON.parse(disk).dockWidgets, selection);
+  assert.equal(JSON.parse(disk).titlebarsEnabled, true);
+  assert.equal(JSON.parse(disk).titlebarStyle, "mac");
+  assert.equal(JSON.parse(disk).titlebarMode, "mac");
+  assert.equal(JSON.parse(disk).titlebarExclusions, "org.gnome.Nautilus,kitty");
   root.isSavingSettings = false;
   root.dockWidgets = [];
   context.readSettings();
   assert.deepEqual(plain(root.dockWidgets), selection);
+  disk = JSON.stringify({ titlebarMode: "theme", titlebarsEnabled: false, titlebarStyle: "mac" });
+  context.readSettings();
+  assert.equal(root.titlebarMode, "theme");
+  context.saveSettings();
+  assert.equal(JSON.parse(disk).titlebarMode, "theme");
 }
 console.log('both QML settings handlers preserve disabled widget selections: passed');
