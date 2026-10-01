@@ -346,3 +346,93 @@ fn unsafe_addresses_never_reach_dispatch() {
     );
     assert!(ipc.calls.is_empty());
 }
+
+fn arrangement_monitors() -> Vec<Value> {
+    vec![
+        json!({"id":1,"name":"DP-1","focused":true,"activeWorkspace":{"name":"2"},"x":-1920,"y":0,"width":3840,"height":2160,"scale":2.0,"transform":0,"reserved":[0,30,0,50]}),
+    ]
+}
+#[test]
+fn arrangement_targets_exact_window_and_respects_scaled_work_area() {
+    let clients = [json!({"address":"0xAAA","monitor":1,"workspace":{"name":"3"}})];
+    let mut ipc = Fake::default();
+    dock::arrange(
+        "arrange-right",
+        "0xAAA",
+        &clients,
+        &arrangement_monitors(),
+        &mut ipc,
+    )
+    .unwrap();
+    assert!(ipc.calls.iter().all(|c| c.contains("address:0xAAA")));
+    assert!(ipc.calls.iter().any(|c| c.contains("internal=0, client=0")));
+    assert!(ipc.calls.iter().any(|c| c.contains("x=960, y=1000")));
+    assert!(ipc.calls.iter().any(|c| c.contains("x=-960, y=30")));
+}
+#[test]
+fn arrangement_rejects_missing_invalid_or_minimised_window_without_dispatch() {
+    let clients = [json!({"address":"0xAAA","monitor":1,"workspace":{"name":"special:minimized"}})];
+    for addr in ["0xAAA", "0xBBB", "0xAAA;exec bad"] {
+        let mut ipc = Fake::default();
+        assert!(
+            dock::arrange(
+                "arrange-left",
+                addr,
+                &clients,
+                &arrangement_monitors(),
+                &mut ipc
+            )
+            .is_err()
+        );
+        assert!(ipc.calls.is_empty());
+    }
+}
+#[test]
+fn go_to_window_preserves_workspace_while_bring_here_moves_it() {
+    let clients = [json!({"address":"0xAAA","monitor":1,"workspace":{"name":"3"}})];
+    let mut ipc = Fake::default();
+    dock::arrange(
+        "go-window",
+        "0xAAA",
+        &clients,
+        &arrangement_monitors(),
+        &mut ipc,
+    )
+    .unwrap();
+    assert_eq!(ipc.calls.len(), 1);
+    assert!(ipc.calls[0].contains("focus"));
+    ipc.calls.clear();
+    dock::arrange(
+        "bring-here",
+        "0xAAA",
+        &clients,
+        &arrangement_monitors(),
+        &mut ipc,
+    )
+    .unwrap();
+    assert!(ipc.calls[0].contains("workspace = \"2\""));
+}
+#[test]
+fn rotated_monitor_geometry_and_missing_second_monitor() {
+    let clients = [json!({"address":"0xAAA","monitor":1,"workspace":{"name":"2"}})];
+    let mut monitors = arrangement_monitors();
+    monitors[0]["transform"] = json!(1);
+    let mut ipc = Fake::default();
+    dock::arrange("arrange-left", "0xAAA", &clients, &monitors, &mut ipc).unwrap();
+    assert!(ipc.calls.iter().any(|c| c.contains("x=540, y=1840")));
+    ipc.calls.clear();
+    assert!(
+        dock::arrange(
+            "arrange-next-monitor",
+            "0xAAA",
+            &clients,
+            &monitors,
+            &mut ipc
+        )
+        .is_err()
+    );
+    assert!(ipc.calls.is_empty());
+    monitors[0]["scale"] = json!(0);
+    assert!(dock::arrange("arrange-left", "0xAAA", &clients, &monitors, &mut ipc).is_err());
+    assert!(ipc.calls.is_empty());
+}

@@ -143,6 +143,23 @@ See [validation notes](docs/VALIDATION.md) for automated coverage, the preview s
 
 MIT licensed. Original work © 2026 rosakodu; Familiar Desktop changes © 2026 Tom Ballard. See [LICENSE](LICENSE).
 
+### Next preview: window actions and file shortcuts
+
+The development branch adds an expanded dock window menu. Select a named window
+and use **Go to / restore** to visit it, or **Bring here** to move it to the
+currently focused workspace. Workspace and minimised labels help locate windows.
+**Arrange selected window** offers left/right half, centre, maximise, floating,
+return to tiling, and next monitor. Half-screen and centre actions make only the
+selected window floating; returning to tiling uses the current Hyprland layout.
+These actions are available through the dock menu, not the title-bar buttons.
+
+Enable **Home, Downloads and Bin shortcuts** in Familiar settings to add three
+file-manager launchers to the dock. They default to off. Downloads follows
+`xdg-user-dir DOWNLOAD`; opening uses `gio open` and the installed file manager.
+The Bin button opens the bin; it never empties it. Command failures appear in the
+window menu or the file shortcuts' hover tooltip. These additions require a
+backend built from the same development commit and are **not in v0.0.5**.
+
 ### Development builds
 
 Only contributors building from source need Rust 1.88+ and Cargo. Run `bash build.sh` explicitly. Clippy and Qt tests run in CI; the normal installer never requests them. Release CI builds Hyprbars against a dated Arch package snapshot and verifies its header ABI, alongside a static Linux x86_64 backend. It tests it without a toolchain on PATH, and publishes it with checksums and source manifests.

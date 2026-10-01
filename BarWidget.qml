@@ -18,6 +18,7 @@ BarWidget {
   property string settingsPath: Quickshell.env("HOME") + "/.config/omarchy/familiar-desktop-settings.json"
   property var shell: root.bar ? root.bar.shell : null
   property string profile: "general"
+  property bool fileShortcutsEnabled: false
   property bool dockEnabled: true
   property bool titlebarsEnabled: false
   property string titlebarMode: "theme"
@@ -73,6 +74,7 @@ BarWidget {
       var txt = settingsFile.text()
       if (txt && txt.trim().length > 0) {
         var s = JSON.parse(txt)
+        root.fileShortcutsEnabled = s.fileShortcutsEnabled === true
         var normalized = DockSettings.normalize(s)
         root.profile = normalized.profile
         root.titlebarsEnabled = normalized.titlebarsEnabled
@@ -141,6 +143,7 @@ BarWidget {
     s.overlayMode = root.overlayMode
     s.visibleWorkspace = root.visibleWorkspace
     s.showFolderTitles = root.showFolderTitles
+    s.fileShortcutsEnabled = root.fileShortcutsEnabled
     s.showBadges = root.showBadges
     s.widgetsEnabled = root.widgetsEnabled
     s.appMenuPosition = root.appMenuPosition || s.appMenuPosition || "left"
@@ -638,6 +641,25 @@ BarWidget {
         }
 
         // 2. Visible Workspace Dropdown
+        Rectangle {
+          Layout.fillWidth: true
+          implicitHeight: 38
+          radius: 8
+          color: Color.composed("popups.text", "popups.text-alpha", Color.text, 0.08)
+          Text {
+            anchors.centerIn: parent
+            text: (root.fileShortcutsEnabled ? "✓  " : "+  ") + "Home, Downloads and Bin shortcuts"
+            color: Color.popups.text
+            font.family: Style.font.family
+            font.pixelSize: 11
+          }
+          MouseArea {
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            onClicked: { root.fileShortcutsEnabled = !root.fileShortcutsEnabled; root.saveSettings() }
+          }
+        }
+
         DockDropdown {
           Layout.fillWidth: true
           showLabel: false

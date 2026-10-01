@@ -13,10 +13,39 @@ PanelWindow {
     required property var dockWindow
     readonly property var app: root.contextApp
     readonly property var windows: app && app.toplevels ? app.toplevels : []
-    readonly property int rowHeight: 34
-    readonly property int cardWidth: 260
+    readonly property int rowHeight: 44
+    readonly property int cardWidth: 300
+    readonly property int actionHeight: 34
     readonly property int visibleWindowCount: Math.min(8, windows.length)
-    readonly property int cardHeight: 54 + visibleWindowCount * rowHeight + 1 + 4 * rowHeight + 10
+    property string selectedWindowAddress: ""
+    property bool showArrange: false
+    readonly property int selectedIndex: {
+        for (var i = 0; i < windows.length; i++) {
+            if (selectedWindowAddress && root.targetWindowArg(app, i) === selectedWindowAddress) return i
+        }
+        return -1
+    }
+    readonly property string selectedAddress: selectedIndex >= 0 ? root.targetWindowArg(app, selectedIndex) : ""
+    readonly property bool canAct: selectedAddress !== "" && !root.desktopActionBusy
+    readonly property var actions: [
+        {label: "Go to / restore selected window", kind: "go-window", enabled: canAct},
+        {label: "Bring selected window here", kind: "bring-here", enabled: canAct},
+        {label: showArrange ? "Hide arrangement actions ▴" : "Arrange selected window ▾", kind: "arrange", enabled: canAct}
+    ].concat(showArrange ? [
+        {label: "Left half (floating)", kind: "arrange-left", enabled: canAct},
+        {label: "Right half (floating)", kind: "arrange-right", enabled: canAct},
+        {label: "Maximise", kind: "arrange-maximize", enabled: canAct},
+        {label: "Centre (floating)", kind: "arrange-center", enabled: canAct},
+        {label: "Make floating", kind: "arrange-float", enabled: canAct},
+        {label: "Return to tiling", kind: "arrange-tile", enabled: canAct},
+        {label: "Move to next monitor", kind: "arrange-next-monitor", enabled: canAct}
+    ] : []).concat([
+        {label: "New Window", kind: "new", enabled: !root.desktopActionBusy},
+        {label: app && app.isPinned ? "Unpin from Dock" : "Pin to Dock", kind: "pin", enabled: true},
+        {label: "Minimise selected window", kind: "minimize", enabled: canAct},
+        {label: "Close selected window", kind: "close", enabled: canAct}
+    ])
+    readonly property int cardHeight: Math.max(80, Math.min(screenHeight - dockOffset - 12, 64 + visibleWindowCount * rowHeight + actions.length * actionHeight + errorLabel.implicitHeight))
     readonly property int dockOffset: root.slotSize + 2 * (Style.gapsOut || 5) + 8
     readonly property real appOffset: (root.hasLeftWidgets ? root.leftWidgetsWidth + root.leftSeparatorSize : 0) +
                                       (root.contextAppIndex + 0.5) * root.slotSize
@@ -47,7 +76,11 @@ PanelWindow {
     implicitWidth: root.isVertical ? cardWidth : screenWidth
     implicitHeight: root.isVertical ? screenHeight : cardHeight
 
-    onVisibleChanged: if (visible) card.forceActiveFocus()
+    onVisibleChanged: if (visible) {
+        selectedWindowAddress = windows.length ? root.targetWindowArg(app, Math.min(app.activeTopIndex || 0, windows.length - 1)) : ""
+        showArrange = false
+        card.forceActiveFocus()
+    }
 
     function dismiss() { root.contextAppId = ""; root.contextAppIndex = -1 }
     function chooseWindow(index) {
@@ -56,15 +89,20 @@ PanelWindow {
     }
     function action(kind) {
         if (!app) return
+        if (kind === "arrange") { showArrange = !showArrange; return }
+        if (kind === "go-window" || kind === "bring-here" || kind.indexOf("arrange-") === 0) {
+            if (canAct) root.desktopAction(kind, selectedAddress)
+            return
+        }
         if (kind === "new") {
             DockModel.setPendingCliHint(app.appId || app.desktopId || "", root.knownWindows)
             DockModel.launchApp(root.shell, app, Util)
         } else if (kind === "pin") {
             root.setPinned(DockModel.togglePinned(root.pinnedIds, app.appId, root.maxDockItems))
         } else if (kind === "minimize") {
-            root.minimizeItem(app, app.activeTopIndex || 0)
+            root.minimizeItem(app, selectedIndex)
         } else if (kind === "close") {
-            var index = app.activeTopIndex || 0
+            var index = selectedIndex
             if (windows[index] && typeof windows[index].close === "function") windows[index].close()
         }
         dismiss()
@@ -89,9 +127,16 @@ PanelWindow {
         focus: true
         Keys.onEscapePressed: function(event) { menu.dismiss(); event.accepted = true }
 
-        Column {
+        Flickable {
             anchors.fill: parent
             anchors.margins: 7
+            clip: true
+            contentWidth: width
+            contentHeight: menuContent.implicitHeight
+            boundsBehavior: Flickable.StopAtBounds
+        Column {
+            id: menuContent
+            width: parent.width
             spacing: 0
 
             Text {
@@ -99,7 +144,7 @@ PanelWindow {
                 height: 40
                 leftPadding: 9
                 verticalAlignment: Text.AlignVCenter
-                text: menu.app ? (menu.app.name || menu.app.appId) : ""
+                text: menu.app ? (menu.app.name || menu.app.appId) + " · " + menu.windows.length + " windows" : ""
                 elide: Text.ElideRight
                 textFormat: Text.PlainText
                 font.family: Style.font.family
@@ -125,44 +170,54 @@ PanelWindow {
                             width: parent.width
                             height: menu.rowHeight
                             radius: 6
-                            color: windowMouse.containsMouse ? Color.accent : "transparent"
+                            activeFocusOnTab: true
+                            Keys.onReturnPressed: menu.selectedWindowAddress = menu.root.targetWindowArg(menu.app, index)
+                            Keys.onSpacePressed: menu.selectedWindowAddress = menu.root.targetWindowArg(menu.app, index)
+                            color: activeFocus || windowMouse.containsMouse || menu.selectedIndex === index ? Color.accent : "transparent"
                             Text {
                                 anchors.fill: parent
                                 anchors.leftMargin: 10
                                 anchors.rightMargin: 10
                                 verticalAlignment: Text.AlignVCenter
                                 text: (menu.app && menu.app.isActive && menu.app.activeTopIndex === index ? "●  " : "    ") +
-                                      (modelData.title || menu.app.name || "Untitled window")
+                                      (modelData.title || menu.app.name || "Untitled window") + "\n" + menu.root.windowLocation(modelData)
                                 elide: Text.ElideRight
                                 textFormat: Text.PlainText
                                 font.family: Style.font.family
                                 font.pixelSize: 12
-                                color: windowMouse.containsMouse ? Color.popups.background : Color.popups.text
+                                color: activeFocus || windowMouse.containsMouse || menu.selectedIndex === index ? Color.popups.background : Color.popups.text
                             }
                             MouseArea {
                                 id: windowMouse
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: menu.chooseWindow(index)
+                                onClicked: menu.selectedWindowAddress = menu.root.targetWindowArg(menu.app, index)
                             }
                         }
                     }
                 }
             }
+            Text {
+                id: errorLabel
+                width: parent.width
+                text: menu.root.desktopActionError || (menu.windows.length ? "Select a window above, then choose an action." : "No open windows.")
+                wrapMode: Text.WordWrap
+                color: Color.popups.text
+                font.family: Style.font.family
+                font.pixelSize: 11
+            }
             Rectangle { width: parent.width; height: 1; color: Color.popups.border }
             Repeater {
-                model: [
-                    { label: "New Window", kind: "new", enabled: true },
-                    { label: menu.app && menu.app.isPinned ? "Unpin from Dock" : "Pin to Dock", kind: "pin", enabled: true },
-                    { label: "Minimize Current Window", kind: "minimize", enabled: menu.windows.length > 0 },
-                    { label: "Close Current Window", kind: "close", enabled: menu.windows.length > 0 }
-                ]
+                model: menu.actions
                 delegate: Rectangle {
                     required property var modelData
                     width: parent.width
-                    height: menu.rowHeight
+                    height: menu.actionHeight
                     radius: 6
+                    activeFocusOnTab: modelData.enabled
+                    Keys.onReturnPressed: if (modelData.enabled) menu.action(modelData.kind)
+                    Keys.onSpacePressed: if (modelData.enabled) menu.action(modelData.kind)
                     color: actionMouse.containsMouse && modelData.enabled ? Color.accent : "transparent"
                     Text {
                         anchors.fill: parent
@@ -187,5 +242,6 @@ PanelWindow {
                 }
             }
         }
+    }
     }
 }
