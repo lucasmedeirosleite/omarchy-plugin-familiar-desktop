@@ -267,6 +267,46 @@ Item {
         }
     }
 
+    property bool fileShortcutsEnabled: false
+    readonly property real fileShortcutsSize: fileShortcutsEnabled ? 3 * slotSize : 0
+    property string desktopActionError: ""
+    readonly property bool desktopActionBusy: desktopActionProcess.running
+    function desktopAction(mode, target) {
+        if (desktopActionBusy) return
+        desktopActionError = ""
+        desktopActionProcess.command = [Qt.resolvedUrl("bin/familiar-desktop").toString().replace(/^file:\/\//, ""), "dock", mode, target]
+        desktopActionProcess.running = true
+    }
+    Process {
+        id: desktopActionProcess
+        stdout: StdioCollector { id: desktopActionOutput; waitForEnd: true }
+        onExited: function(code, status) {
+            var result = null
+            try { result = JSON.parse(desktopActionOutput.text) } catch (e) {}
+            if (code !== 0 || !result || result.state !== "ok") {
+                root.desktopActionError = result && result.message ? String(result.message).slice(0, 300) : "Action failed. Check the installed Familiar backend."
+            } else {
+                root.contextAppId = ""
+                root.updateDockItems()
+                minimizeRefreshTimer.restart()
+            }
+        }
+    }
+    function windowLocation(top) {
+        var spaces = Hyprland.workspaces && Hyprland.workspaces.values ? Hyprland.workspaces.values : []
+        for (var i = 0; i < spaces.length; i++) {
+            var ws = spaces[i]
+            var tops = ws.toplevels && ws.toplevels.values ? ws.toplevels.values : []
+            for (var j = 0; j < tops.length; j++) {
+                if (tops[j] === top || tops[j].wayland === top) {
+                    var name = String(ws.name || ws.id)
+                    return name === "special:minimized" ? "Minimised" : name.indexOf("special:") === 0 ? "Special workspace: " + name.slice(8) : "Workspace " + name
+                }
+            }
+        }
+        return "Workspace unavailable"
+    }
+
     // The app menu is keyed by app id, so window updates do not leave a stale
     // snapshot behind while the user is choosing a window.
     property string contextAppId: ""
@@ -287,6 +327,7 @@ Item {
         } else {
             root.activeStackItem = null
             root.activeMenuItem = null
+            root.desktopActionError = ""
             root.contextAppIndex = index
             root.contextAppId = item.appId
         }
@@ -920,20 +961,20 @@ Item {
     readonly property int maxDockItems: {
         if (root.isVertical) {
             // Vertical: limit by screen height minus widget slots
-            var usedV = (hasLeftWidgets ? (leftWidgetsWidth + leftSeparatorSize) : 0)
+            var usedV = root.fileShortcutsSize + (hasLeftWidgets ? (leftWidgetsWidth + leftSeparatorSize) : 0)
                       + (hasRightWidgets ? (rightSeparatorSize + rightWidgetsWidth) : 0)
             var availableH = Math.max(0, logicalScreenHeight - usedV)
             return Math.max(3, Math.floor(availableH / root.slotSize))
         } else {
             // Horizontal: limit by screen width minus widget slots
-            var usedH = (hasLeftWidgets ? (leftWidgetsWidth + leftSeparatorSize) : 0)
+            var usedH = root.fileShortcutsSize + (hasLeftWidgets ? (leftWidgetsWidth + leftSeparatorSize) : 0)
                       + (hasRightWidgets ? (rightSeparatorSize + rightWidgetsWidth) : 0)
             var availableW = Math.max(0, logicalScreenWidth - usedH)
             return Math.max(3, Math.floor(availableW / root.slotSize))
         }
     }
 
-    readonly property real totalDockDimension: Math.max(root.slotSize,
+    readonly property real totalDockDimension: Math.max(root.slotSize, root.fileShortcutsSize +
         (hasLeftWidgets ? (leftWidgetsWidth + leftSeparatorSize) : 0) +
         itemsWidth +
         (hasRightWidgets ? (rightSeparatorSize + rightWidgetsWidth) : 0))
@@ -978,6 +1019,7 @@ Item {
             if (txt && txt.trim().length > 0) {
                 var s = JSON.parse(txt)
                 if (!s || typeof s !== "object") return
+                root.fileShortcutsEnabled = s.fileShortcutsEnabled === true
                 var normalized = DockSettings.normalize(s)
                 root.profile = normalized.profile
                 root.titlebarsEnabled = normalized.titlebarsEnabled
@@ -1044,6 +1086,7 @@ Item {
             titlebarStyle: root.titlebarStyle,
             titlebarExclusions: root.titlebarExclusions,
             dockEnabled: root.dockEnabled,
+            fileShortcutsEnabled: root.fileShortcutsEnabled,
             visibilityMode: root.visibilityMode,
             preferredVisibilityMode: root.preferredVisibilityMode,
             autohide: DockSettings.legacyAutohide(root.visibilityMode),
@@ -2927,6 +2970,16 @@ Item {
                 width: root.isVertical ? root.slotSize : root.totalDockDimension
                 height: root.isVertical ? root.totalDockDimension : root.slotSize
 
+                PlacesShortcuts {
+                    visible: root.fileShortcutsEnabled
+                    vertical: root.isVertical
+                    slotSize: root.slotSize
+                    busy: root.desktopActionBusy
+                    errorText: root.desktopActionError
+                    x: root.isVertical ? 0 : root.totalDockDimension - root.fileShortcutsSize
+                    y: root.isVertical ? root.totalDockDimension - root.fileShortcutsSize : 0
+                    onOpenLocation: function(location) { root.desktopAction("open-location", location) }
+                }
                 // 1. Left Dock Active Bar/Tray Widgets
                 Repeater {
                     model: root.leftWidgetsList

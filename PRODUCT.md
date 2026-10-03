@@ -49,10 +49,10 @@ and Windows names denote layout starting points, not pixel-perfect emulation.
 
 ## Current evidence
 
-Portable manifest/path validation and unit tests pass. An on-device screenshot
-of the General layout is in the README. The audit environment has no Omarchy
+Portable manifest/path validation and unit tests pass. An approved isolated QML render
+of the settings modal is in the README. The audit environment has no Omarchy
 session or Quickshell imports, so lifecycle behavior is unverified
-here. The public GitHub repository exists; no release has been created.
+here. Version 0.0.5 is published as an early preview.
 
 
 ## Integrated window controls

@@ -146,3 +146,18 @@ building. Release packaging requires the shared library and records its
 checksum, upstream license and complete build package inventory.
 
 The XPS runtime load, buttons and compositor restart still need live testing.
+
+## Next preview: explicit window actions and places
+
+Backend fixtures cover exact-address dispatch, missing/invalid/minimised targets,
+scaled/rotated monitor work areas, go-to versus bring-here, missing second monitor,
+and malformed monitor geometry. CLI fixtures check literal file paths, XDG
+Downloads, Bin URI, unavailable folders and file-manager failure. Rust clippy
+passes. Changed QML parses.
+
+An isolated Qt render exercised the actual AppMenu bindings: selection survives
+reordering and disables actions when the selected window disappears. Window-layer
+integration and shell data were substituted for this check; it is not a live
+Hyprland test. Live placement (including app minimum sizes and decorations),
+monitor switching, focus, menu scrolling and file-manager activation remain
+unverified. Arrangement is explicitly per-window, with no global floating rule.

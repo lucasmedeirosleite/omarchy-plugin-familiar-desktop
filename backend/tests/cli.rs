@@ -144,3 +144,57 @@ fn executable_badges_save_and_usage_errors_have_bounded_json() {
         assert!(v["message"].as_str().unwrap().chars().count() <= 300);
     }
 }
+
+#[test]
+fn file_shortcuts_use_literal_local_paths_and_surface_failures() {
+    let f = Fixture::new();
+    let downloads = f.home.join("Downloads with spaces; literal");
+    fs::create_dir(&downloads).unwrap();
+    for (name, script) in [
+        (
+            "xdg-user-dir",
+            "#!/bin/sh\nprintf '%s\\n' \"$HOME/Downloads with spaces; literal\"\n",
+        ),
+        (
+            "gio",
+            "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$HOME/location-args\"\n",
+        ),
+    ] {
+        let file = f.tools.join(name);
+        fs::write(&file, script).unwrap();
+        fs::set_permissions(file, fs::Permissions::from_mode(0o755)).unwrap();
+    }
+    let out = f.run(&["dock", "open-location", "downloads"]);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stdout)
+    );
+    assert_eq!(
+        fs::read_to_string(f.home.join("location-args")).unwrap(),
+        format!("open\n--\n{}\n", downloads.display())
+    );
+    assert!(f.run(&["dock", "open-location", "trash"]).status.success());
+    assert!(
+        fs::read_to_string(f.home.join("location-args"))
+            .unwrap()
+            .ends_with("trash:///\n")
+    );
+    assert!(
+        !f.run(&["dock", "open-location", "unknown"])
+            .status
+            .success()
+    );
+    fs::remove_dir(downloads).unwrap();
+    assert!(
+        !f.run(&["dock", "open-location", "downloads"])
+            .status
+            .success()
+    );
+    fs::write(
+        f.tools.join("gio"),
+        "#!/bin/sh\necho 'No file manager' >&2\nexit 1\n",
+    )
+    .unwrap();
+    assert!(!f.run(&["dock", "open-location", "home"]).status.success());
+}

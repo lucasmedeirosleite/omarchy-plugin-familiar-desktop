@@ -844,7 +844,165 @@ pub fn operate(
     }
     Ok(true)
 }
+// Explicit per-window actions never fall back to another client or launch an app.
+pub fn arrange(
+    mode: &str,
+    addr: &str,
+    clients: &[Value],
+    monitors: &[Value],
+    ipc: &mut impl DockIpc,
+) -> Result<()> {
+    if !valid_address(addr) {
+        return Err("Select a window with a valid address".into());
+    }
+    let c = clients
+        .iter()
+        .find(|c| address(c).eq_ignore_ascii_case(addr))
+        .ok_or("That window has closed")?;
+    let selector = lua(&format!("address:{addr}"));
+    let focused = monitors
+        .iter()
+        .find(|m| m["focused"] == true)
+        .ok_or("No focused monitor")?;
+    if mode == "bring-here" || (mode == "go-window" && hidden(c)) {
+        let ws = focused["activeWorkspace"]["name"]
+            .as_str()
+            .filter(|s| !s.is_empty() && !s.starts_with("special:"))
+            .ok_or("No regular workspace")?;
+        move_window(ipc, addr, ws)?;
+        return focus(ipc, addr);
+    }
+    if mode == "go-window" {
+        return focus(ipc, addr);
+    }
+    if hidden(c) {
+        return Err("Restore this window before arranging it".into());
+    }
+    let monitor = monitors
+        .iter()
+        .find(|m| m["id"] == c["monitor"])
+        .ok_or("Window monitor unavailable")?;
+    let mut commands = Vec::new();
+    match mode {
+        "arrange-maximize" => commands.push(format!(
+            "fullscreen({{window={selector}, mode='maximized', action='set'}})"
+        )),
+        "arrange-next-monitor" => {
+            let next = monitors
+                .iter()
+                .position(|m| m["id"] == monitor["id"])
+                .unwrap_or(0);
+            if monitors.len() < 2 {
+                return Err("Connect another monitor first".into());
+            }
+            let name = monitors[(next + 1) % monitors.len()]["name"]
+                .as_str()
+                .ok_or("Invalid monitor name")?;
+            commands.push(format!(
+                "move({{window={selector}, monitor={}, follow=true}})",
+                lua(name)
+            ));
+        }
+        "arrange-tile" | "arrange-float" | "arrange-center" | "arrange-left" | "arrange-right" => {
+            // Compute geometry before sending any mutation, including malformed-output checks.
+            let mut geometry = None;
+            if matches!(mode, "arrange-left" | "arrange-right") {
+                let scale = monitor["scale"]
+                    .as_f64()
+                    .filter(|s| s.is_finite() && *s > 0.0)
+                    .ok_or("Invalid monitor scale")?;
+                let mut w = monitor["width"].as_f64().ok_or("Invalid monitor width")? / scale;
+                let mut h = monitor["height"].as_f64().ok_or("Invalid monitor height")? / scale;
+                if monitor["transform"].as_i64().unwrap_or(0) % 2 != 0 {
+                    std::mem::swap(&mut w, &mut h);
+                }
+                let r = |i: usize| monitor["reserved"][i].as_f64().unwrap_or(0.0);
+                let x = monitor["x"].as_f64().ok_or("Invalid monitor position")? + r(0);
+                let y = monitor["y"].as_f64().ok_or("Invalid monitor position")? + r(1);
+                w -= r(0) + r(2);
+                h -= r(1) + r(3);
+                if w < 200.0 || h < 100.0 {
+                    return Err("Monitor work area is too small".into());
+                }
+                let left = (w / 2.0).floor();
+                geometry = Some((
+                    if mode == "arrange-left" { x } else { x + left },
+                    y,
+                    if mode == "arrange-left" {
+                        left
+                    } else {
+                        w - left
+                    },
+                    h,
+                ));
+            }
+            commands.push(format!(
+                "fullscreen_state({{window={selector}, internal=0, client=0, action='set'}})"
+            ));
+            commands.push(format!(
+                "float({{window={selector}, action='{}'}})",
+                if mode == "arrange-tile" {
+                    "unset"
+                } else {
+                    "set"
+                }
+            ));
+            if mode == "arrange-center" {
+                commands.push(format!("center({{window={selector}}})"));
+            }
+            if let Some((x, y, w, h)) = geometry {
+                commands.push(format!(
+                    "resize({{window={selector}, x={}, y={}}})",
+                    w.round() as i64,
+                    h.round() as i64
+                ));
+                commands.push(format!(
+                    "move({{window={selector}, x={}, y={}}})",
+                    x.round() as i64,
+                    y.round() as i64
+                ));
+            }
+        }
+        _ => return Err("Unknown window arrangement".into()),
+    }
+    for command in commands {
+        dispatch(ipc, format!("dispatch hl.dsp.window.{command}"))?;
+    }
+    focus(ipc, addr)
+}
+
 pub fn execute(mode: &str, queries: &[String]) -> Result<Value> {
+    if mode == "open-location" {
+        if queries.len() != 1 {
+            return Err("Provide exactly one file shortcut".into());
+        }
+        let target = match queries.first().map(String::as_str) {
+            Some("home") => {
+                let home = common::home()?;
+                if !home.is_absolute() || !home.is_dir() {
+                    return Err("Home folder is unavailable".into());
+                }
+                home.to_string_lossy().into_owned()
+            }
+            Some("downloads") => {
+                let path =
+                    common::run("xdg-user-dir", &["DOWNLOAD".into()], Duration::from_secs(3))?;
+                let path = path.trim();
+                if !PathBuf::from(path).is_absolute() || !PathBuf::from(path).is_dir() {
+                    return Err("Downloads folder is unavailable".into());
+                }
+                path.to_string()
+            }
+            Some("trash") => "trash:///".into(),
+            _ => return Err("Unknown file shortcut".into()),
+        };
+        common::run(
+            "gio",
+            &["open".into(), "--".into(), target],
+            Duration::from_secs(8),
+        )?;
+        return Ok(json!({"state":"ok"}));
+    }
     if mode == "scan-icons" {
         let v = scan_icons(&icon_bases(&common::home()?));
         if serde_json::to_vec(&v).map_err(|e| e.to_string())?.len() > common::OUTPUT_LIMIT {
@@ -853,6 +1011,15 @@ pub fn execute(mode: &str, queries: &[String]) -> Result<Value> {
         return Ok(v);
     }
     if ![
+        "go-window",
+        "bring-here",
+        "arrange-left",
+        "arrange-right",
+        "arrange-maximize",
+        "arrange-center",
+        "arrange-tile",
+        "arrange-float",
+        "arrange-next-monitor",
         "scan-cli",
         "minimize",
         "minimize-instance",
@@ -896,6 +1063,13 @@ pub fn execute(mode: &str, queries: &[String]) -> Result<Value> {
     }
     let monitors: Vec<Value> = serde_json::from_str(&ipc.command("j/monitors")?)
         .map_err(|_| "Hyprland returned invalid monitors")?;
+    if mode == "go-window" || mode == "bring-here" || mode.starts_with("arrange-") {
+        if queries.len() != 1 {
+            return Err("Provide exactly one window address".into());
+        }
+        arrange(mode, &queries[0], &clients, &monitors, &mut ipc)?;
+        return Ok(json!({"state":"ok"}));
+    }
     let active: Value = serde_json::from_str(&ipc.command("j/activewindow")?)
         .map_err(|_| "Hyprland returned invalid active window")?;
     if !operate(
