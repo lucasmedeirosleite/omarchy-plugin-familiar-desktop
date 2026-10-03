@@ -14,13 +14,13 @@ Familiar Desktop adds a mouse-friendly app dock to Omarchy Quattro. Launch or re
 
 ## Install
 
-Version **0.0.5 is an early preview** for Omarchy Quattro. Live desktop testing remains outstanding. Run this single command in your Omarchy terminal for Mac-style controls:
+Version **0.0.6 is an early preview** for Omarchy Quattro. Live desktop testing remains outstanding. Run this single command in your Omarchy terminal for Mac-style controls:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/tcballard/omarchy-plugin-familiar-desktop/v0.0.5/install.sh) mac
+bash <(curl -fsSL https://raw.githubusercontent.com/tcballard/omarchy-plugin-familiar-desktop/v0.0.6/install.sh) mac
 ```
 
-Use `windows` instead of `mac` for controls on the right. The same command handles fresh installs and updates, checks out **v0.0.5**, downloads the prebuilt Linux x86_64 Rust backend, verifies its SHA-256 checksum and version, then enables the dock and controls. Cargo, Rustup and Clippy are not needed or installed. Other architectures stop with an explicit error; installation never falls back to a source build. It refuses to overwrite tracked local source changes. Failed backend downloads or verification leave the previous executable intact.
+Use `windows` instead of `mac` for controls on the right. The same command handles fresh installs and updates, checks out **v0.0.6**, downloads the prebuilt Linux x86_64 Rust backend, verifies its SHA-256 checksum and version, then enables the dock and controls. Cargo, Rustup and Clippy are not needed or installed. Other architectures stop with an explicit error; installation never falls back to a source build. It refuses to overwrite tracked local source changes. Failed backend downloads or verification leave the previous executable intact.
 
 Window controls also download as a checksum-verified prebuilt Hyprbars library. The initial supported target is Linux x86_64, Hyprland 0.56.2 commit `efb50993780079460b0cbed1363e2166a2de1d9f`, ABI `efb50993780079460b0cbed1363e2166a2de1d9f_aq_0.15_hu_0.14_hg_0.5_hc_0.1_hlg_0.6`. Unsupported ABIs stop before backend installation or title-bar configuration. The normal installer never runs Hyprpm, clones Hyprland, or installs a compiler. Missing assets, checksum failures and loader failures stop setup; they never trigger a source build. Existing Hyprbars ownership protections still apply.
 
@@ -80,7 +80,7 @@ Launching apps uses Omarchy's app launcher, with `uwsm-app` and `gtk-launch` as 
 ## Made for everyday use
 
 - **See what is running.** Pinned apps and running windows stay within reach, with indicators and notification badges from the dock implementation.
-- **Choose a window by name.** Right-click an app for a scrollable window list, New Window, Pin or Unpin, Minimize Current Window and Close Current Window.
+- **Choose a window by name.** Right-click an app for a scrollable window list, window recovery and arrangement, New Window, Pin or Unpin, and actions to minimise or close the selected window.
 - **Use the mouse or keyboard.** Left-click launches or switches, middle-click opens a new window, and the existing dock supports keyboard selection and window cycling.
 - **Keep your setup.** Pins and folders are shared between layouts; changing a preset does not install applications, themes or global shortcuts.
 
@@ -99,7 +99,9 @@ If your Omarchy bar is already at the bottom, the dock uses the opposite edge to
 | Action | How |
 | --- | --- |
 | Launch or switch to an app | Left-click its icon |
-| See and select named windows | Right-click its icon, then click a window |
+| Visit an open window | Right-click its icon, select a window, then choose **Go to / restore** |
+| Recover or arrange a window | Select it in the app menu, then choose **Bring here** or **Arrange selected window** |
+| Show Home, Downloads and Bin | Enable file shortcuts in Familiar settings |
 | Open another window | Middle-click its icon or choose **New Window** |
 | Pin, unpin, minimize or close | Right-click its icon and choose the action |
 | Change layout and settings | Click the computer icon in the bar to open centred settings |
@@ -114,7 +116,7 @@ omarchy-shell io.github.tcballard.familiar-desktop setProfile mac
 
 ## Update and remove
 
-Rerun the installation command above to install or repair v0.0.5. This checkout stays pinned to its release; use the installer from a newer release when upgrading.
+Rerun the installation command above to install or repair v0.0.6. This checkout stays pinned to its release; use the installer from a newer release when upgrading.
 
 To remove it:
 
@@ -131,7 +133,7 @@ If you moved bar widgets into the dock using an earlier development build, add t
 
 The manifest declares a hosted service and bar widget under `io.github.tcballard.familiar-desktop`. The source derives from [rosakodu/omarchy-dock](https://github.com/rosakodu/omarchy-dock) at commit `467070386fe60e173295020d3911176202b3e0c9` (MIT). This project has separate identity and settings while retaining that dock's window, monitor, folder and theme handling. See [the product record](PRODUCT.md) for the current scope and next milestones.
 
-Portable plugin validation and the tests in `tests/run` pass. The preview is an isolated QML render; live checks remain: initial installation, preset switching, menu focus and dismissal, minimized windows, two monitors, workspace changes, light and dark themes, 200% scale, shell reload, dock widget persistence and removal. Version 0.0.5 is an early preview; live desktop and marketplace verification remain outstanding. Report bugs through [GitHub issues](https://github.com/tcballard/omarchy-plugin-familiar-desktop/issues); report sensitive security issues privately through the repository's GitHub security advisory feature.
+Portable plugin validation and the tests in `tests/run` pass. The preview is an isolated QML render; live checks remain: initial installation, preset switching, menu focus and dismissal, minimized windows, two monitors, workspace changes, light and dark themes, 200% scale, shell reload, dock widget persistence and removal. Version 0.0.6 is an early preview; live desktop and marketplace verification remain outstanding. Report bugs through [GitHub issues](https://github.com/tcballard/omarchy-plugin-familiar-desktop/issues); report sensitive security issues privately through the repository's GitHub security advisory feature.
 
 On Omarchy, validate and test the checkout with:
 
@@ -143,9 +145,9 @@ See [validation notes](docs/VALIDATION.md) for automated coverage, the preview s
 
 MIT licensed. Original work © 2026 rosakodu; Familiar Desktop changes © 2026 Tom Ballard. See [LICENSE](LICENSE).
 
-### Next preview: window actions and file shortcuts
+### Window actions and file shortcuts
 
-The development branch adds an expanded dock window menu. Select a named window
+Version 0.0.6 adds an expanded dock window menu. Select a named window
 and use **Go to / restore** to visit it, or **Bring here** to move it to the
 currently focused workspace. Workspace and minimised labels help locate windows.
 **Arrange selected window** offers left/right half, centre, maximise, floating,
@@ -157,8 +159,7 @@ Enable **Home, Downloads and Bin shortcuts** in Familiar settings to add three
 file-manager launchers to the dock. They default to off. Downloads follows
 `xdg-user-dir DOWNLOAD`; opening uses `gio open` and the installed file manager.
 The Bin button opens the bin; it never empties it. Command failures appear in the
-window menu or the file shortcuts' hover tooltip. These additions require a
-backend built from the same development commit and are **not in v0.0.5**.
+window menu or the file shortcuts' hover tooltip. The version-pinned installer supplies the matching 0.0.6 backend.
 
 ### Development builds
 
