@@ -52,7 +52,7 @@ and Windows names denote layout starting points, not pixel-perfect emulation.
 Portable manifest/path validation and unit tests pass. An approved isolated QML render
 of the settings modal is in the README. The audit environment has no Omarchy
 session or Quickshell imports, so lifecycle behavior is unverified
-here. Version 0.0.5 is published as an early preview.
+here. Version 0.0.6 is prepared as an early preview; publication is a separate step.
 
 
 ## Integrated window controls
