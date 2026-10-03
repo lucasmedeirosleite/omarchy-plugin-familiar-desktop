@@ -147,7 +147,7 @@ checksum, upstream license and complete build package inventory.
 
 The XPS runtime load, buttons and compositor restart still need live testing.
 
-## Next preview: explicit window actions and places
+## v0.0.6: explicit window actions and places
 
 Backend fixtures cover exact-address dispatch, missing/invalid/minimised targets,
 scaled/rotated monitor work areas, go-to versus bring-here, missing second monitor,
