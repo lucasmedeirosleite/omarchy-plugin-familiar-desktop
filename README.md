@@ -135,7 +135,24 @@ omarchy-shell io.github.tcballard.familiar-desktop setProfile windows
 omarchy-shell io.github.tcballard.familiar-desktop setProfile mac
 ```
 
-## Update and remove
+## Clean removal (v0.1.0 candidate)
+
+Settings and generated Lua stay in Familiar-owned files. Optional title bars and
+Caps Lock use small guarded includes in your Hyprland configuration. For verified
+cleanup before deleting the candidate, run:
+
+```bash
+bash ~/.config/omarchy/plugins/io.github.tcballard.familiar-desktop/uninstall.sh
+```
+
+The script restores journalled windows, stops if minimised windows remain, disables
+Familiar, resets Caps Lock, removes the owned title-bar include and unloads Hyprbars
+before removal. Edited hooks or failed reloads stop deletion. Preferences and
+backups remain. The generic Omarchy remove command does not run this cleanup.
+See [separate configuration and rollback](docs/ROLLBACK.md) for exact guarantees,
+legacy migration and XPS acceptance.
+
+## Update and remove the published v0.0.6
 
 Rerun the installation command above to install or repair v0.0.6. This checkout stays pinned to its release; use the installer from a newer release when upgrading.
 
@@ -195,14 +212,15 @@ special-character sequences. AltGr/Right Alt, Compose on other keys and unrelate
 keyboard options remain intact. Caps-based layout switches and the both-Shift
 Caps Lock shortcut are replaced. Per-device overrides still take precedence.
 
-The explicit preference adds a marked block at the end of
-`~/.config/hypr/hyprland.lua` (or `$XDG_CONFIG_HOME/hypr/hyprland.lua`). It reads the
+The explicit preference is stored in `~/.config/omarchy/familiar-input/caps-lock.lua`.
+A small guarded include is added at the end of
+`~/.config/hypr/hyprland.lua` (or `$XDG_CONFIG_HOME/hypr/hyprland.lua`). The separate Lua file reads the
 configured keyboard options on each reload and login; `input.lua` and Omarchy
 core files are never edited. Familiar checks the reload and restores the previous
 configuration if applying the preference fails. Backups are kept under
 `${XDG_STATE_HOME:-~/.local/state}/omarchy/familiar-caps-lock/`.
 
-**Use configuration** removes only that block and reloads your current personal
+**Use configuration** removes that include and generated keyboard file, then reloads your current personal
 configuration. The preference persists when the Familiar UI is disabled; reset it
 before downgrading or removing Familiar. If the plugin is removed without reset,
 the block becomes inactive when Hyprland next reloads because the plugin manifest

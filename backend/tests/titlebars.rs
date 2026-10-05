@@ -39,7 +39,10 @@ impl Hypr for Fake {
             self.loaded = fs::read_to_string(self.paths.directory.join("titlebars.lua"))
                 .unwrap_or_default()
                 .contains("hl.plugin.load")
-                && self.load_on_reload;
+                && self.load_on_reload
+                && fs::read_to_string(&self.paths.config)
+                    .unwrap_or_default()
+                    .contains(BEGIN);
         }
         if args.first() == Some(&"eval") && !self.probe_ok {
             return Ok("error: missing Lua support".into());
@@ -529,4 +532,99 @@ fn larger_controls_override_geometry_without_enabling_disabled_bars() {
     );
     args.size = "huge".into();
     assert!(familiar_desktop::titlebars::theme_policy(&serde_json::json!({}), &args).is_err());
+}
+
+#[test]
+fn remove_preserves_exact_bytes_permissions_and_later_edits() {
+    use std::os::unix::fs::PermissionsExt;
+    for original in ["-- no newline", "-- spaces  \n\n\n", ""] {
+        let mut f = Fixture::new();
+        fs::write(&f.paths.config, original).unwrap();
+        fs::set_permissions(&f.paths.config, fs::Permissions::from_mode(0o640)).unwrap();
+        f.setup().unwrap();
+        f.setup().unwrap();
+        let text = fs::read_to_string(&f.paths.config).unwrap() + "\n-- subsequent user edit\n";
+        fs::write(&f.paths.config, text).unwrap();
+        titlebars::remove(&f.paths, &mut f.hypr).unwrap();
+        assert_eq!(
+            fs::read_to_string(&f.paths.config).unwrap(),
+            format!("{original}\n-- subsequent user edit\n")
+        );
+        assert_eq!(
+            fs::metadata(&f.paths.config).unwrap().permissions().mode() & 0o777,
+            0o640
+        );
+    }
+}
+
+#[test]
+fn edited_foreign_or_unowned_hooks_block_removal_without_data_loss() {
+    for variant in ["edit", "foreign", "missing-owner"] {
+        let mut f = Fixture::new();
+        f.setup().unwrap();
+        if variant == "edit" {
+            let text = fs::read_to_string(&f.paths.config)
+                .unwrap()
+                .replace("dofile", "print");
+            fs::write(&f.paths.config, text).unwrap();
+        } else if variant == "foreign" {
+            f.paths.source = PathBuf::from("/foreign/plugin");
+        } else {
+            fs::remove_file(f.paths.directory.join("owner.json")).unwrap();
+        }
+        let before = fs::read(&f.paths.config).unwrap();
+        assert!(titlebars::remove(&f.paths, &mut f.hypr).is_err());
+        assert_eq!(fs::read(&f.paths.config).unwrap(), before);
+        assert!(f.paths.directory.join("titlebars.lua").exists());
+    }
+}
+
+#[test]
+fn symlink_config_is_never_replaced() {
+    use std::os::unix::fs::symlink;
+    let mut f = Fixture::new();
+    let target = f.paths.config.with_extension("personal");
+    fs::rename(&f.paths.config, &target).unwrap();
+    symlink(&target, &f.paths.config).unwrap();
+    assert!(f.setup().is_err());
+    assert!(
+        fs::symlink_metadata(&f.paths.config)
+            .unwrap()
+            .file_type()
+            .is_symlink()
+    );
+    assert_eq!(fs::read_to_string(target).unwrap(), f.original);
+}
+
+#[test]
+fn failed_remove_retains_hook_and_ownership_for_retry() {
+    let mut f = Fixture::new();
+    f.setup().unwrap();
+    f.apply().unwrap();
+    let before = fs::read(&f.paths.config).unwrap();
+    f.hypr.fail_reload = true;
+    assert!(titlebars::remove(&f.paths, &mut f.hypr).is_err());
+    assert_eq!(fs::read(&f.paths.config).unwrap(), before);
+    assert!(f.paths.directory.join("owner.json").exists());
+    assert!(f.paths.directory.join("titlebars.lua").exists());
+    f.hypr.fail_reload = false;
+    titlebars::remove(&f.paths, &mut f.hypr).unwrap();
+    assert!(!f.hypr.loaded);
+}
+
+#[test]
+fn legacy_hook_migrates_surgically_without_restoring_unknown_old_whitespace() {
+    let mut f = Fixture::new();
+    f.setup().unwrap();
+    let owner_path = f.paths.directory.join("owner.json");
+    let mut state = common::read_json(&owner_path).unwrap();
+    state.as_object_mut().unwrap().remove("hookVersion");
+    common::atomic(&owner_path, state.to_string().as_bytes()).unwrap();
+    // Legacy install trimmed before adding two newlines. Its pre-install bytes
+    // cannot be reconstructed; migration preserves the current personal prefix.
+    let installed = fs::read_to_string(&f.paths.config).unwrap();
+    let baseline = installed.split(BEGIN).next().unwrap().to_owned();
+    f.setup().unwrap();
+    titlebars::remove(&f.paths, &mut f.hypr).unwrap();
+    assert_eq!(fs::read_to_string(&f.paths.config).unwrap(), baseline);
 }

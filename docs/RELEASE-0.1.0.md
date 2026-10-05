@@ -28,6 +28,7 @@ Use `mac` for left-side controls. This installer embeds the full source SHA and 
 - [ ] Complete docs/XPS-TEST.md on that exact source. Record `omarchy-version`, `hyprctl version`, monitor/scale, plugin SHA and each result.
 - [ ] Check fresh install, upgrade from v0.0.6, repeat install, settings/pin retention, local-change refusal, disable/re-enable, Caps reset, title-bar removal and rollback. Preserve personal files; use disposable test profiles where possible.
 - [ ] Verify actual window actions, Show Desktop/Restore, focus/dismissal, keyboard behavior after reload/login, themes/scaling and available monitor coverage. State unavailable hardware coverage explicitly.
+- [ ] Complete docs/ROLLBACK.md: separate settings, exact fresh-install cleanup, later-edit preservation, refusal paths, live keyboard/title-bar reset and the installed uninstall command.
 - [ ] Finish the compatibility paragraph in docs/v0.1.0.md using those results. Replace the rendered settings preview with a real screenshot when available.
 - [ ] Review the existing release download trust boundary before public promotion: checksums detect corruption but are fetched beside the release; immutable provenance binding and workflow dependency pinning are not established by these checks. Do not describe this as a security audit.
 - [ ] Freeze source, create an annotated v0.1.0 tag at that exact commit, and publish the release using the approved notes. Never move the tag. Observe Release binaries through asset upload and verify the downloaded published assets.

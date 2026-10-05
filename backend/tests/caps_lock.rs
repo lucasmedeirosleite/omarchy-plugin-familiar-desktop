@@ -43,6 +43,7 @@ fn fixture() -> (tempfile::TempDir, Paths) {
         config: dir.path().join("hyprland.lua"),
         manifest: dir.path().join("plugin 'quoted'/manifest.json"),
         state: dir.path().join("state"),
+        generated: dir.path().join("familiar-input/caps-lock.lua"),
     };
     fs::write(&paths.config, "-- personal config\nrequire('hypr.input')\n").unwrap();
     fs::set_permissions(&paths.config, fs::Permissions::from_mode(0o640)).unwrap();
@@ -78,7 +79,7 @@ fn choices_persist_preserve_personal_content_and_reset_exactly() {
         assert_eq!(result["mode"], mode);
         let current = fs::read_to_string(&p.config).unwrap();
         assert_eq!(
-            caps_lock::split(&current, &p.manifest).unwrap(),
+            caps_lock::split_current(&current, &p).unwrap(),
             (before.clone(), mode.into())
         );
         assert_eq!(
@@ -232,4 +233,123 @@ dofile(hook)
             String::from_utf8_lossy(&output.stderr)
         );
     }
+}
+
+#[test]
+fn separate_choice_changes_do_not_rewrite_hyprland_and_reset_removes_include() {
+    let (_dir, p) = fixture();
+    let original = fs::read(&p.config).unwrap();
+    let mut h = FakeHypr::default();
+    caps_lock::change("normal", &p, &mut h).unwrap();
+    let included = fs::read(&p.config).unwrap();
+    assert!(!String::from_utf8_lossy(&included).contains("caps:capslock"));
+    assert!(
+        fs::read_to_string(&p.generated)
+            .unwrap()
+            .contains("caps:capslock")
+    );
+    caps_lock::change("compose", &p, &mut h).unwrap();
+    assert_eq!(fs::read(&p.config).unwrap(), included);
+    assert!(
+        fs::read_to_string(&p.generated)
+            .unwrap()
+            .contains("compose:caps")
+    );
+    caps_lock::change("reset", &p, &mut h).unwrap();
+    assert_eq!(fs::read(&p.config).unwrap(), original);
+    assert!(!p.generated.exists());
+}
+
+#[test]
+fn legacy_inline_preference_migrates_without_losing_user_bytes() {
+    let (_dir, p) = fixture();
+    let original = fs::read_to_string(&p.config).unwrap();
+    fs::write(
+        &p.config,
+        format!(
+            "{}{}",
+            original,
+            caps_lock::hook("normal", &p.manifest).unwrap()
+        ),
+    )
+    .unwrap();
+    let mut h = FakeHypr::default();
+    assert_eq!(
+        caps_lock::change("status", &p, &mut h).unwrap()["mode"],
+        "normal"
+    );
+    caps_lock::change("compose", &p, &mut h).unwrap();
+    assert!(
+        !fs::read_to_string(&p.config)
+            .unwrap()
+            .contains("-- BEGIN FAMILIAR CAPS LOCK")
+    );
+    caps_lock::change("reset", &p, &mut h).unwrap();
+    assert_eq!(fs::read_to_string(&p.config).unwrap(), original);
+}
+
+#[test]
+fn failed_change_restores_both_files_and_failed_first_apply_removes_generated_file() {
+    let (_dir, p) = fixture();
+    let original = fs::read(&p.config).unwrap();
+    let mut h = FakeHypr {
+        fail_reload: true,
+        ..Default::default()
+    };
+    assert!(caps_lock::change("normal", &p, &mut h).is_err());
+    assert_eq!(fs::read(&p.config).unwrap(), original);
+    assert!(!p.generated.exists());
+    caps_lock::change("normal", &p, &mut h).unwrap();
+    let generated = fs::read(&p.generated).unwrap();
+    h.fail_reload = true;
+    assert!(caps_lock::change("compose", &p, &mut h).is_err());
+    assert_eq!(fs::read(&p.generated).unwrap(), generated);
+}
+
+#[test]
+fn edited_or_symlinked_separate_config_and_include_are_preserved() {
+    let (_dir, p) = fixture();
+    let mut h = FakeHypr::default();
+    caps_lock::change("normal", &p, &mut h).unwrap();
+    let main = fs::read(&p.config).unwrap();
+    fs::write(&p.generated, "-- personal edit").unwrap();
+    assert!(caps_lock::change("reset", &p, &mut h).is_err());
+    assert_eq!(fs::read(&p.config).unwrap(), main);
+    assert_eq!(
+        fs::read_to_string(&p.generated).unwrap(),
+        "-- personal edit"
+    );
+    fs::remove_file(&p.generated).unwrap();
+    symlink(&p.config, &p.generated).unwrap();
+    assert!(caps_lock::change("compose", &p, &mut h).is_err());
+    fs::remove_file(&p.generated).unwrap();
+    fs::write(
+        &p.config,
+        String::from_utf8(main).unwrap().replace("dofile", "print"),
+    )
+    .unwrap();
+    assert!(caps_lock::change("normal", &p, &mut h).is_err());
+}
+
+#[test]
+fn separate_include_executes_and_is_inert_without_plugin_or_generated_file() {
+    let (dir, p) = fixture();
+    fs::create_dir_all(p.generated.parent().unwrap()).unwrap();
+    fs::write(&p.generated, "loaded = (loaded or 0) + 1").unwrap();
+    let harness = dir.path().join("include.lua");
+    let include = caps_lock::include_hook(&p);
+    let script = format!(
+        "loaded = 0\n{include}\nassert(loaded == 1)\nos.remove({})\n{include}\nassert(loaded == 1)\nio.open = function() return nil end\n{include}\nassert(loaded == 1)",
+        familiar_desktop::common::lua(&p.generated.to_string_lossy())
+    );
+    fs::write(&harness, script).unwrap();
+    let output = Command::new("lua")
+        .arg(&harness)
+        .output()
+        .expect("Install Lua for development tests");
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
 }
