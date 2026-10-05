@@ -205,16 +205,24 @@ pub fn shortcuts(h: &mut impl Hypr) -> Result<Value> {
 pub fn execute(args: &[String]) -> Result<Value> {
     let mut h = common::SystemHypr;
     match args.first().map(String::as_str) {
-        Some("show" | "restore") if args.len() == 1 => {
+        Some("show" | "restore" | "prepare-remove") if args.len() == 1 => {
             let state = env::var_os("XDG_STATE_HOME")
                 .map(std::path::PathBuf::from)
                 .unwrap_or(common::home()?.join(".local/state"));
-            show_desktop(
-                &args[0],
+            let result = show_desktop(
+                if args[0] == "prepare-remove" {
+                    "restore"
+                } else {
+                    &args[0]
+                },
                 &state.join("omarchy/familiar-desktop-recovery.json"),
                 &env::var("HYPRLAND_INSTANCE_SIGNATURE").unwrap_or_default(),
                 &mut h,
-            )
+            )?;
+            if args[0] == "prepare-remove" {
+                ensure_removable(&clients(&mut h)?)?;
+            }
+            Ok(result)
         }
         Some("quit-app") if args.len() == 2 => quit_app(&args[1], &mut h),
         Some("shortcuts") if args.len() == 1 => shortcuts(&mut h),
@@ -227,6 +235,18 @@ pub fn execute(args: &[String]) -> Result<Value> {
                 .into(),
         ),
     }
+}
+
+pub fn ensure_removable(windows: &[Value]) -> Result<()> {
+    if windows.iter().any(|w| {
+        matches!(
+            w["workspace"]["name"].as_str(),
+            Some("special:minimized" | "special:familiar-desktop")
+        )
+    }) {
+        return Err("Hidden windows remain. Restore minimised windows from the dock before uninstalling; no plugin files removed".into());
+    }
+    Ok(())
 }
 
 fn force_quit(address: &str, h: &mut impl Hypr) -> Result<Value> {

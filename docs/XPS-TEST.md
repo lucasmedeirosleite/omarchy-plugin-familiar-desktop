@@ -46,11 +46,10 @@ To return to the published v0.0.6 after restoring windows:
 bash <(curl -fsSL https://raw.githubusercontent.com/tcballard/omarchy-plugin-familiar-desktop/v0.0.6/install.sh) windows
 ```
 
-To remove, restore windows, then:
+To remove this candidate:
 
 ```bash
-~/.config/omarchy/plugins/io.github.tcballard.familiar-desktop/bin/familiar-desktop titlebars remove
-omarchy plugin remove io.github.tcballard.familiar-desktop
+bash ~/.config/omarchy/plugins/io.github.tcballard.familiar-desktop/uninstall.sh
 ```
 
 Settings, pins, badges and recovery journal are retained. Companion apps and unrelated Hyprland configuration are left in place.
@@ -63,3 +62,7 @@ Settings, pins, badges and recovery journal are retained. Companion apps and unr
 - Switch between a light and dark theme. The dock background and widget text follow the bar palette; title-bar background/text follow popup tokens unless the theme explicitly overrides them.
 - Mac controls: circular traffic lights, crisp dark marks on hover, expand arrows instead of a plus. Windows controls: rounded-square buttons with close/minimise/maximise paths. Verify clicks at 100%, 150% and 200% scale, including moving between differently scaled monitors.
 - Apps that draw their own header can still show duplicate controls. The existing window-class exclusion remains available; automatic detection is not part of this fix.
+
+## Clean rollback acceptance
+
+Complete [ROLLBACK.md](ROLLBACK.md) before release: separate Caps Lock file, byte-preserving fresh title-bar install/remove, preservation of subsequent personal edits, edited-hook refusal, failed reload stopping deletion, and actual Hyprbars unload. Generic plugin deletion is not this cleanup path.

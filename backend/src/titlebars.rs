@@ -363,6 +363,33 @@ pub fn strip_hook(text: &str) -> Result<String> {
         Ok(text.into())
     }
 }
+fn include_hook(paths: &Paths) -> String {
+    let generated = paths.directory.join("titlebars.lua");
+    format!(
+        "{BEGIN}\nlocal familiarFile = io.open({}, 'r')\nif familiarFile then\n  familiarFile:close()\n  dofile({})\nend\n{END}\n",
+        lua(&generated.to_string_lossy()),
+        lua(&generated.to_string_lossy())
+    )
+}
+fn owned_config(paths: &Paths, state: &Value, text: &str) -> Result<String> {
+    let has_owner = state.as_object().is_some_and(|o| !o.is_empty());
+    if has_owner
+        && (state["source"].as_str() != Some(paths.source.to_string_lossy().as_ref())
+            || state["config"].as_str() != Some(paths.config.to_string_lossy().as_ref()))
+    {
+        return Err("Title bars belong to another Familiar installation; no file changed".into());
+    }
+    if !has_owner && (text.contains(BEGIN) || text.contains(END)) {
+        return Err("Title-bar hook has no ownership record; no file changed".into());
+    }
+    let block = if state["hookVersion"] == 2 {
+        format!("\n{}", include_hook(paths))
+    } else {
+        include_hook(paths)
+    };
+    crate::config_file::strip_exact(text, BEGIN, END, &block)
+}
+
 fn text_file(path: &Path) -> Result<String> {
     String::from_utf8(common::bounded_file(path, common::FILE_LIMIT)?).map_err(|e| e.to_string())
 }
@@ -428,7 +455,8 @@ pub fn setup(args: &Args, paths: &Paths, hypr: &mut impl Hypr) -> Result<Value> 
     {
         return Err("Title bars belong to another Familiar installation".into());
     }
-    let clean = strip_hook(&text_file(&paths.config)?)?;
+    let original = crate::config_file::read(&paths.config)?;
+    let clean = owned_config(paths, &state, &original)?;
     let settings_path = paths
         .home
         .join(".config/omarchy/familiar-desktop-settings.json");
@@ -484,17 +512,24 @@ pub fn setup(args: &Args, paths: &Paths, hypr: &mut impl Hypr) -> Result<Value> 
     atomic(
         &state_file,
         &serde_json::to_vec(
-            &json!({"library":library,"source":paths.source,"config":paths.config}),
+            &json!({"library":library,"source":paths.source,"config":paths.config,"hookVersion":2}),
         )
         .map_err(|e| e.to_string())?,
     )?;
-    let hook = format!(
-        "{}\n\n{BEGIN}\nlocal familiarFile = io.open({}, 'r')\nif familiarFile then\n  familiarFile:close()\n  dofile({})\nend\n{END}\n",
-        clean.trim_end(),
-        lua(&generated.to_string_lossy()),
-        lua(&generated.to_string_lossy())
-    );
-    atomic(&paths.config, hook.as_bytes())?;
+    // Include the separator in our exact owned block; never trim personal bytes.
+    let hook = format!("{}\n{}", clean, include_hook(paths));
+    if let Err(error) = crate::config_file::replace(
+        &paths.config,
+        &original,
+        &hook,
+        &paths.directory.join("backups"),
+    ) {
+        atomic(
+            &state_file,
+            &serde_json::to_vec(&state).map_err(|e| e.to_string())?,
+        )?;
+        return Err(error);
+    }
     if args.enable {
         settings["titlebarsEnabled"] = json!(true);
         settings["titlebarStyle"] = json!(args.style);
@@ -520,7 +555,9 @@ pub fn reconcile(args: &Args, paths: &Paths, hypr: &mut impl Hypr) -> Result<Val
     if state["source"].as_str() != Some(paths.source.to_string_lossy().as_ref()) {
         return Err("Title bars belong to another Familiar installation; run setup from the installed plugin".into());
     }
-    if !text_file(&paths.config)?.contains(BEGIN) {
+    let current_config = crate::config_file::read(&paths.config)?;
+    owned_config(paths, &state, &current_config)?;
+    if !current_config.contains(BEGIN) {
         return Ok(
             json!({"state":"setup-required","message":"The title-bar configuration hook is missing."}),
         );
@@ -624,22 +661,50 @@ pub fn reconcile(args: &Args, paths: &Paths, hypr: &mut impl Hypr) -> Result<Val
 pub fn remove(paths: &Paths, hypr: &mut impl Hypr) -> Result<Value> {
     let state_file = paths.directory.join("owner.json");
     let state = read_json(&state_file)?;
-    if !state.as_object().is_some_and(|o| o.is_empty()) {
-        atomic(
-            &paths.config,
-            strip_hook(&text_file(&paths.config)?)?.as_bytes(),
-        )?;
-        for p in [paths.directory.join("titlebars.lua"), state_file] {
-            match fs::remove_file(p) {
-                Ok(()) => {}
-                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
-                Err(e) => return Err(e.to_string()),
-            }
+    let before = crate::config_file::read(&paths.config)?;
+    let after = owned_config(paths, &state, &before)?;
+    if state.as_object().is_some_and(|o| o.is_empty()) {
+        return Ok(json!({"state":"removed","message":"No Familiar title-bar hook is installed."}));
+    }
+    let library = state["library"]
+        .as_str()
+        .ok_or("Invalid title-bar ownership state")?;
+    let backups = paths.directory.join("backups");
+    crate::config_file::replace(&paths.config, &before, &after, &backups)?;
+    let cleanup = (|| {
+        if loaded(hypr)? {
+            checked(hypr, &["plugin", "unload", library])?;
         }
         checked(hypr, &["reload"])?;
+        let errors = hypr.command(&["configerrors"])?;
+        if !errors.trim().is_empty() {
+            return Err(common::clipped(&errors));
+        }
+        if loaded(hypr)? {
+            return Err("Hyprbars is still loaded; inspect another configuration source".into());
+        }
+        Ok(())
+    })();
+    if let Err(error) = cleanup {
+        crate::config_file::replace(&paths.config, &after, &before, &backups)?;
+        let recovery = checked(hypr, &["reload"]);
+        return Err(format!(
+            "{error}. Previous title-bar hook restored; recovery reload: {}",
+            recovery.err().unwrap_or_else(|| "ok".into())
+        ));
     }
-    Ok(json!({"state":"removed","message":"Familiar's title-bar hook was removed."}))
+    for p in [paths.directory.join("titlebars.lua"), state_file] {
+        match fs::remove_file(p) {
+            Ok(()) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => return Err(e.to_string()),
+        }
+    }
+    Ok(
+        json!({"state":"removed","message":"Familiar's title-bar hook was removed and Hyprbars unloaded."}),
+    )
 }
+
 pub fn window_action(name: &str, hypr: &mut impl Hypr) -> Result<Value> {
     if !["close", "minimize", "maximize"].contains(&name) {
         return Err("Unknown window action".into());
