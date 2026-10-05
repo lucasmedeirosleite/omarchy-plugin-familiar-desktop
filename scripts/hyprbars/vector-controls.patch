@@ -1,0 +1,49 @@
+diff --git a/hyprbars/barDeco.cpp b/hyprbars/barDeco.cpp
+index c27653d..e879cec 100644
+--- a/hyprbars/barDeco.cpp
++++ b/hyprbars/barDeco.cpp
+@@ -24,6 +24,7 @@
+ #include <hyprland/src/state/MonitorState.hpp>
+ 
+ #include "globals.hpp"
++#include "FamiliarIcons.hpp"
+ #include "BarPassElement.hpp"
+ 
+ #include <climits>
+@@ -370,7 +371,7 @@ void CHyprBar::renderBarButtons(CBox* barBox, const float scale, const float a)
+                           scaledButtonSize};
+         buttonBox.round();
+ 
+-        g_pHyprOpenGL->renderRect(buttonBox, color, {.round = static_cast<int>(std::round(scaledButtonSize / 2.0)), .roundingPower = 2.F});
++        g_pHyprOpenGL->renderRect(buttonBox, color, {.round = button.icon.starts_with("familiar-windows-") ? static_cast<int>(std::round(3 * scale)) : static_cast<int>(std::round(scaledButtonSize / 2.0)), .roundingPower = 2.F});
+ 
+         offset += scaledButtonsPad + scaledButtonSize;
+     }
+@@ -401,11 +402,26 @@ void CHyprBar::renderBarButtonsText(CBox* barBox, const float scale, const float
+         bool       hovering   = VECINRECT(COORDS, currentPos.x, currentPos.y, currentPos.x + button.size + BARBUTTONPADDING, currentPos.y + button.size);
+         noScaleOffset += BARBUTTONPADDING + button.size;
+ 
++        if (button.icon.starts_with("familiar-") && button.iconTex &&
++            button.iconTex->m_size.x != std::round(scaledButtonSize))
++            button.iconTex = nullptr;
+         if ((!button.iconTex || button.iconTex->m_texID == 0) && !button.icon.empty()) {
+             // render icon
+             auto fgcol = button.userfg ? button.fgcol : (button.bgcol.r + button.bgcol.g + button.bgcol.b < 1) ? CHyprColor(0xFFFFFFFF) : CHyprColor(0xFF000000);
+ 
+-            button.iconTex = g_pHyprRenderer->renderText(button.icon, fgcol, std::round(button.size * 0.62 * scale), false, "sans", scaledButtonSize);
++            if (button.icon.starts_with("familiar-")) {
++                const int pixels = std::max(1, static_cast<int>(std::round(scaledButtonSize)));
++                auto* surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, pixels, pixels);
++                auto* cr = cairo_create(surface);
++                cairo_set_source_rgba(cr, fgcol.r, fgcol.g, fgcol.b, fgcol.a);
++                drawFamiliarIcon(cr, button.icon, pixels);
++                cairo_destroy(cr);
++                cairo_surface_flush(surface);
++                button.iconTex = g_pHyprRenderer->createTexture(surface);
++                cairo_surface_destroy(surface);
++            } else {
++                button.iconTex = g_pHyprRenderer->renderText(button.icon, fgcol, std::round(button.size * 0.62 * scale), false, "sans", scaledButtonSize);
++            }
+         }
+ 
+         if (!button.iconTex || button.iconTex->m_texID == 0)

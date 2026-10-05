@@ -183,3 +183,19 @@ workspace; Rust tests, clippy, static musl builds and packaged executable checks
 run in GitHub Actions for the PR SHA. See the exact run on PR #12 for final counts.
 No live Omarchy, focus, hotplug, application size constraints, installation,
 update or removal acceptance has been observed for this candidate.
+
+## XPS settings and title-bar correction
+
+The reported XPS banner identified `plugin.hyprbars.buttons_on_hover`. The exact
+Hyprbars revision pinned in `scripts/build-hyprbars.sh` registers `icon_on_hover`
+but not `buttons_on_hover`; the renderer now emits only the supported setting.
+The renderer regression retains always-visible button icons.
+
+Settings use a bounded 800×560 logical-pixel frame with persistent navigation:
+General, Dock, Windows, Keyboard and Getting Started. Small screens use a compact
+sidebar; only the selected page scrolls. Existing preference handlers are retained.
+Qt rendering checked all five pages at 800×560 and 560×480 using substituted shell
+theme tokens and a stand-in workspace dropdown. This is not live shell acceptance.
+The SettingsFrame test exercises clicks, arrow navigation, scroll reset, compact
+layout and dismissal. Live layer focus, outside-click/Escape dismissal and the
+corrected title-bar config still require an XPS retest.

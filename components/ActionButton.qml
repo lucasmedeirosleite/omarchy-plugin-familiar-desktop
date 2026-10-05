@@ -7,7 +7,7 @@ Rectangle {
     property bool selected: false
     signal clicked()
     implicitHeight: 40
-    implicitWidth: 120
+    implicitWidth: Math.max(120, label.implicitWidth + 24)
     radius: 7
     color: selected ? Color.accent : (mouse.containsMouse || activeFocus ? Style.hoverFillFor(Color.popups.text, Color.accent) : "transparent")
     border.width: 1
@@ -20,6 +20,7 @@ Rectangle {
     Keys.onReturnPressed: if (enabled) clicked()
     Keys.onSpacePressed: if (enabled) clicked()
     Text {
+        id: label
         anchors.fill: parent
         anchors.margins: 8
         text: root.text

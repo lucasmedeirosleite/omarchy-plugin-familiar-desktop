@@ -10,6 +10,8 @@ Download and extract the `familiar-desktop-release` ZIP from the candidate PR's 
 bash install-candidate.sh windows
 ```
 
+After installing, run `omarchy restart shell` to load the new QML and title-bar library.
+
 Use `mac` for left-side controls. This installs the exact commit embedded in the bundle, with a static prebuilt Rust helper and the prebuilt Hyprbars library. No Rust, Clippy, compiler, Hyprpm or Hyprland checkout is needed. Linux x86_64 and the Hyprland 0.56.2 ABI in the README are supported. An ABI mismatch stops before installation.
 
 The installer preserves pins/settings, refuses local source changes, verifies the bundle checksums and backend version, and disables the plugin before replacing its code. If setup fails after that point, leave it disabled and use the rollback command below. Companion applications are not installed.
@@ -44,11 +46,23 @@ To return to the published v0.0.6 after restoring windows:
 bash <(curl -fsSL https://raw.githubusercontent.com/tcballard/omarchy-plugin-familiar-desktop/v0.0.6/install.sh) windows
 ```
 
-To remove, restore windows, then:
+To remove this candidate:
 
 ```bash
-~/.config/omarchy/plugins/io.github.tcballard.familiar-desktop/bin/familiar-desktop titlebars remove
-omarchy plugin remove io.github.tcballard.familiar-desktop
+bash ~/.config/omarchy/plugins/io.github.tcballard.familiar-desktop/uninstall.sh
 ```
 
 Settings, pins, badges and recovery journal are retained. Companion apps and unrelated Hyprland configuration are left in place.
+
+## Dock selection and visual controls retest
+
+- In **Dock → Dock position**, choose Bottom, Left and Right. Check vertical icons, file shortcuts, widgets, app menus, folder menus and hover hints at each edge. Open a menu before moving the dock: it must dismiss. Check reserve-space and overlay modes, plus hover reveal on the new edge (the old edge must stop responding).
+- Reopen settings, change General/Windows/Mac layout, then restart the shell: the explicit position must persist. Select Automatic to restore preset placement. Put Omarchy’s bar on the requested edge: the dock must move opposite with an explanation in settings, then return to your requested edge when the bar moves away. Check both monitors and 200% scale where available.
+- Add Apps, Clock, Audio and two plugin widgets. All switches must stay selected; close/reopen the picker and restart the shell, then check them again. Remove only Audio and confirm every other selection remains. Disable/re-enable dock widgets and confirm the selection survives.
+- Switch between a light and dark theme. The dock background and widget text follow the bar palette; title-bar background/text follow popup tokens unless the theme explicitly overrides them.
+- Mac controls: circular traffic lights, crisp dark marks on hover, expand arrows instead of a plus. Windows controls: rounded-square buttons with close/minimise/maximise paths. Verify clicks at 100%, 150% and 200% scale, including moving between differently scaled monitors.
+- Apps that draw their own header can still show duplicate controls. The existing window-class exclusion remains available; automatic detection is not part of this fix.
+
+## Clean rollback acceptance
+
+Complete [ROLLBACK.md](ROLLBACK.md) before release: separate Caps Lock file, byte-preserving fresh title-bar install/remove, preservation of subsequent personal edits, edited-hook refusal, failed reload stopping deletion, and actual Hyprbars unload. Generic plugin deletion is not this cleanup path.

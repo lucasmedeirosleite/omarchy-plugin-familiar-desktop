@@ -1,0 +1,70 @@
+name: Bug report
+description: Something in Familiar Desktop is broken or behaves unexpectedly.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please check existing issues first. One problem per report makes it easier to track a fix.
+        Remove private information from logs and screenshots before posting.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened, and what did you expect?
+      placeholder: Describe the problem and the result you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open...
+        2. Choose...
+        3. The problem appears when...
+        Does it happen every time?
+    validations:
+      required: true
+  - type: input
+    id: familiar-version
+    attributes:
+      label: Familiar version or commit
+      description: Paste the release tag, or run git -C ~/.config/omarchy/plugins/io.github.tcballard.familiar-desktop rev-parse HEAD. If installation failed, give the command or download you used.
+      placeholder: v0.1.0-rc.4, full commit SHA, or installation URL
+    validations:
+      required: true
+  - type: dropdown
+    id: install-route
+    attributes:
+      label: How did you install Familiar?
+      options:
+        - Release candidate ZIP
+        - Versioned release installer
+        - Omarchy plugin add
+        - Source or development build
+        - Other / unsure
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Omarchy and Hyprland versions
+      description: Run omarchy-version and hyprctl version. Include the Hyprland ABI string. Say if either command is unavailable.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: desktop
+    attributes:
+      label: Desktop setup
+      description: Theme, monitor count and scales (such as 100% or 200%), dock position, and window-control style. For app-specific problems include the app name/version and window class if known.
+      placeholder: Two monitors, 100% + 200%, theme..., left dock, Windows controls, app...
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Error text, screenshots or recording
+      description: Paste the complete error, or attach a screenshot or short recording. For keyboard/configuration errors, include the output of hyprctl -j configerrors. Do not attach your entire configuration directory.
+  - type: textarea
+    id: regression
+    attributes:
+      label: Did this work before?
+      description: Last working Familiar version, recent updates, and any workaround you have found.

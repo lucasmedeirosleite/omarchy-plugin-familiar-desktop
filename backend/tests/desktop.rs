@@ -143,3 +143,17 @@ fn shortcuts_are_active_described_bindings_with_literal_text() {
 fn force_quit_requires_explicit_confirmation() {
     assert!(desktop::execute(&["force-quit".into(), "0x1".into()]).is_err());
 }
+
+#[test]
+fn removal_refuses_hidden_windows_without_guessing_their_ownership() {
+    for name in ["special:minimized", "special:familiar-desktop"] {
+        assert!(desktop::ensure_removable(&[window("0x1", name, -1, 20)]).is_err());
+    }
+    assert!(
+        desktop::ensure_removable(&[
+            window("0x1", "1", 1, 20),
+            window("0x2", "special:scratch", -2, 21)
+        ])
+        .is_ok()
+    );
+}

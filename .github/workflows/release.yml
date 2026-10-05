@@ -19,7 +19,7 @@ jobs:
           pacman -S --needed --noconfirm base-devel git hyprland glaze
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event.release.tag_name || github.event.pull_request.head.sha || github.sha }}
       - run: bash scripts/build-hyprbars.sh
       - uses: actions/upload-artifact@v4
         with:
@@ -32,7 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event.release.tag_name || github.event.pull_request.head.sha || github.sha }}
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.99.0
@@ -45,7 +45,8 @@ jobs:
         if: github.event_name == 'release'
         env:
           TAG: ${{ github.event.release.tag_name }}
-        run: test "$TAG" = "v$(node -p 'require("./manifest.json").version')"
+          PRERELEASE: ${{ github.event.release.prerelease }}
+        run: node scripts/verify-release-tag.cjs
       - name: Test and build static backend
         run: |
           cargo test --manifest-path backend/Cargo.toml --locked --release --target x86_64-unknown-linux-musl
@@ -70,7 +71,9 @@ jobs:
           path: release-assets/*
           if-no-files-found: error
   publish:
-    if: github.event_name == 'release'
+    # RCs retain their explicitly attached, tested bundles. Only final releases
+    # receive the versioned assets used by the normal download installer.
+    if: github.event_name == 'release' && !github.event.release.prerelease
     needs: build
     runs-on: ubuntu-latest
     permissions:

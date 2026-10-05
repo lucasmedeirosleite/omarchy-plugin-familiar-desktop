@@ -15,6 +15,7 @@ struct FakeHypr {
     fail_reload: bool,
     config_error: bool,
     fail_probe: bool,
+    config_errors_json: Option<String>,
 }
 impl Hypr for FakeHypr {
     fn command(&mut self, args: &[&str]) -> Result<String> {
@@ -32,7 +33,10 @@ impl Hypr for FakeHypr {
                 self.config_error = false;
                 return Ok("[\"fixture parse error\"]".into());
             }
-            return Ok("[]".into());
+            return Ok(self
+                .config_errors_json
+                .clone()
+                .unwrap_or_else(|| "[\"\"]".into()));
         }
         Ok("ok".into())
     }
@@ -43,6 +47,7 @@ fn fixture() -> (tempfile::TempDir, Paths) {
         config: dir.path().join("hyprland.lua"),
         manifest: dir.path().join("plugin 'quoted'/manifest.json"),
         state: dir.path().join("state"),
+        generated: dir.path().join("familiar-input/caps-lock.lua"),
     };
     fs::write(&paths.config, "-- personal config\nrequire('hypr.input')\n").unwrap();
     fs::set_permissions(&paths.config, fs::Permissions::from_mode(0o640)).unwrap();
@@ -78,7 +83,7 @@ fn choices_persist_preserve_personal_content_and_reset_exactly() {
         assert_eq!(result["mode"], mode);
         let current = fs::read_to_string(&p.config).unwrap();
         assert_eq!(
-            caps_lock::split(&current, &p.manifest).unwrap(),
+            caps_lock::split_current(&current, &p).unwrap(),
             (before.clone(), mode.into())
         );
         assert_eq!(
@@ -231,5 +236,220 @@ dofile(hook)
             "{}",
             String::from_utf8_lossy(&output.stderr)
         );
+    }
+}
+
+#[test]
+fn separate_choice_changes_do_not_rewrite_hyprland_and_reset_removes_include() {
+    let (_dir, p) = fixture();
+    let original = fs::read(&p.config).unwrap();
+    let mut h = FakeHypr::default();
+    caps_lock::change("normal", &p, &mut h).unwrap();
+    let included = fs::read(&p.config).unwrap();
+    assert!(!String::from_utf8_lossy(&included).contains("caps:capslock"));
+    assert!(
+        fs::read_to_string(&p.generated)
+            .unwrap()
+            .contains("caps:capslock")
+    );
+    caps_lock::change("compose", &p, &mut h).unwrap();
+    assert_eq!(fs::read(&p.config).unwrap(), included);
+    assert!(
+        fs::read_to_string(&p.generated)
+            .unwrap()
+            .contains("compose:caps")
+    );
+    caps_lock::change("reset", &p, &mut h).unwrap();
+    assert_eq!(fs::read(&p.config).unwrap(), original);
+    assert!(!p.generated.exists());
+}
+
+#[test]
+fn legacy_inline_preference_migrates_without_losing_user_bytes() {
+    let (_dir, p) = fixture();
+    let original = fs::read_to_string(&p.config).unwrap();
+    fs::write(
+        &p.config,
+        format!(
+            "{}{}",
+            original,
+            caps_lock::hook("normal", &p.manifest).unwrap()
+        ),
+    )
+    .unwrap();
+    let mut h = FakeHypr::default();
+    assert_eq!(
+        caps_lock::change("status", &p, &mut h).unwrap()["mode"],
+        "normal"
+    );
+    caps_lock::change("compose", &p, &mut h).unwrap();
+    assert!(
+        !fs::read_to_string(&p.config)
+            .unwrap()
+            .contains("-- BEGIN FAMILIAR CAPS LOCK")
+    );
+    caps_lock::change("reset", &p, &mut h).unwrap();
+    assert_eq!(fs::read_to_string(&p.config).unwrap(), original);
+}
+
+#[test]
+fn failed_change_restores_both_files_and_failed_first_apply_removes_generated_file() {
+    let (_dir, p) = fixture();
+    let original = fs::read(&p.config).unwrap();
+    let mut h = FakeHypr {
+        fail_reload: true,
+        ..Default::default()
+    };
+    assert!(caps_lock::change("normal", &p, &mut h).is_err());
+    assert_eq!(fs::read(&p.config).unwrap(), original);
+    assert!(!p.generated.exists());
+    caps_lock::change("normal", &p, &mut h).unwrap();
+    let generated = fs::read(&p.generated).unwrap();
+    h.fail_reload = true;
+    assert!(caps_lock::change("compose", &p, &mut h).is_err());
+    assert_eq!(fs::read(&p.generated).unwrap(), generated);
+}
+
+#[test]
+fn edited_or_symlinked_separate_config_and_include_are_preserved() {
+    let (_dir, p) = fixture();
+    let mut h = FakeHypr::default();
+    caps_lock::change("normal", &p, &mut h).unwrap();
+    let main = fs::read(&p.config).unwrap();
+    fs::write(&p.generated, "-- personal edit").unwrap();
+    assert!(caps_lock::change("reset", &p, &mut h).is_err());
+    assert_eq!(fs::read(&p.config).unwrap(), main);
+    assert_eq!(
+        fs::read_to_string(&p.generated).unwrap(),
+        "-- personal edit"
+    );
+    fs::remove_file(&p.generated).unwrap();
+    symlink(&p.config, &p.generated).unwrap();
+    assert!(caps_lock::change("compose", &p, &mut h).is_err());
+    fs::remove_file(&p.generated).unwrap();
+    fs::write(
+        &p.config,
+        String::from_utf8(main).unwrap().replace("dofile", "print"),
+    )
+    .unwrap();
+    assert!(caps_lock::change("normal", &p, &mut h).is_err());
+}
+
+#[test]
+fn separate_include_executes_and_is_inert_without_plugin_or_generated_file() {
+    let (dir, p) = fixture();
+    fs::create_dir_all(p.generated.parent().unwrap()).unwrap();
+    fs::write(&p.generated, "loaded = (loaded or 0) + 1").unwrap();
+    let harness = dir.path().join("include.lua");
+    let include = caps_lock::include_hook(&p);
+    let script = format!(
+        "loaded = 0\n{include}\nassert(loaded == 1)\nos.remove({})\n{include}\nassert(loaded == 1)\nio.open = function() return nil end\n{include}\nassert(loaded == 1)",
+        familiar_desktop::common::lua(&p.generated.to_string_lossy())
+    );
+    fs::write(&harness, script).unwrap();
+    let output = Command::new("lua")
+        .arg(&harness)
+        .output()
+        .expect("Install Lua for development tests");
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+// Keep an independently frozen copy of the loop emitted by rc.2.
+fn old_hook(mode: &str, manifest: &std::path::Path) -> String {
+    caps_lock::hook(mode, manifest)
+        .unwrap()
+        .replace("for raw_option in", "for option in")
+        .replace("local option = raw_option:match", "option = option:match")
+}
+
+#[test]
+fn rc2_inline_and_separate_config_upgrade_and_reset_preserve_personal_edits() {
+    for separate in [false, true] {
+        for mode in ["normal", "compose"] {
+            for action in ["normal", "compose", "reset"] {
+                let (_dir, p) = fixture();
+                let original = fs::read_to_string(&p.config).unwrap();
+                let old = old_hook(mode, &p.manifest);
+                let included = if separate {
+                    fs::create_dir_all(p.generated.parent().unwrap()).unwrap();
+                    fs::write(&p.generated, &old).unwrap();
+                    caps_lock::include_hook(&p)
+                } else {
+                    old
+                };
+                let personal = "\n-- later personal edit\n";
+                fs::write(&p.config, format!("{original}{included}{personal}")).unwrap();
+                let mut h = FakeHypr::default();
+                assert_eq!(
+                    caps_lock::change("status", &p, &mut h).unwrap()["mode"],
+                    mode
+                );
+                caps_lock::change(action, &p, &mut h).unwrap();
+                if action != "reset" {
+                    assert_eq!(
+                        fs::read_to_string(&p.generated).unwrap(),
+                        caps_lock::hook(action, &p.manifest).unwrap()
+                    );
+                }
+                caps_lock::change("reset", &p, &mut h).unwrap();
+                assert_eq!(
+                    fs::read_to_string(&p.config).unwrap(),
+                    format!("{original}{personal}")
+                );
+                assert!(!p.generated.exists());
+            }
+        }
+    }
+}
+
+#[test]
+fn edited_rc2_generated_config_is_not_adopted() {
+    let (_dir, p) = fixture();
+    fs::create_dir_all(p.generated.parent().unwrap()).unwrap();
+    let old = old_hook("normal", &p.manifest) + "-- personal edit\n";
+    fs::write(&p.generated, &old).unwrap();
+    let before = fs::read(&p.config).unwrap();
+    assert!(caps_lock::change("normal", &p, &mut FakeHypr::default()).is_err());
+    assert_eq!(fs::read_to_string(&p.generated).unwrap(), old);
+    assert_eq!(fs::read(&p.config).unwrap(), before);
+}
+
+#[test]
+fn empty_error_entries_allow_apply_and_reset_but_real_or_malformed_errors_rollback() {
+    for response in [r#"[]"#, r#"[""]"#, r#"["", "  ", "\n\t"]"#] {
+        let (_dir, p) = fixture();
+        let before = fs::read(&p.config).unwrap();
+        let mut h = FakeHypr {
+            config_errors_json: Some(response.into()),
+            ..Default::default()
+        };
+        for mode in ["normal", "compose", "reset"] {
+            caps_lock::change(mode, &p, &mut h).unwrap();
+        }
+        assert_eq!(fs::read(&p.config).unwrap(), before);
+        assert!(!p.generated.exists());
+    }
+    for response in [
+        r#"["", "real parse error", " "]"#,
+        r#"[null]"#,
+        r#"{}"#,
+        "not json",
+    ] {
+        let (_dir, p) = fixture();
+        let before = fs::read(&p.config).unwrap();
+        let mut h = FakeHypr {
+            config_errors_json: Some(response.into()),
+            ..Default::default()
+        };
+        let error = caps_lock::change("normal", &p, &mut h).unwrap_err();
+        if response.contains("real parse error") {
+            assert!(error.contains("real parse error"));
+        }
+        assert_eq!(fs::read(&p.config).unwrap(), before);
+        assert!(!p.generated.exists());
     }
 }

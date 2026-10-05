@@ -30,8 +30,11 @@ git -C "$work_dir/plugins" remote add origin https://github.com/hyprwm/hyprland-
 git -C "$work_dir/plugins" fetch --depth 1 origin "$plugin_commit"
 git -C "$work_dir/plugins" checkout --detach FETCH_HEAD
 test "$(git -C "$work_dir/plugins" rev-parse HEAD)" = "$plugin_commit"
+git -C "$work_dir/plugins" apply --check "$root_dir/scripts/hyprbars/vector-controls.patch"
+git -C "$work_dir/plugins" apply "$root_dir/scripts/hyprbars/vector-controls.patch"
+cp "$root_dir/scripts/hyprbars/FamiliarIcons.hpp" "$work_dir/plugins/hyprbars/"
 # GCC's spelling is -fno-gnu-unique (the upstream makefile uses a linker spelling).
-make -C "$work_dir/plugins/hyprbars" EXTRA_FLAGS=-fno-gnu-unique
+make -C "$work_dir/plugins/hyprbars" EXTRA_FLAGS="-fno-gnu-unique $(pkg-config --cflags cairo)" LIBS="$(pkg-config --libs cairo)"
 mkdir -p "$root_dir/hyprbars-assets"
 asset="hyprbars-linux-x86_64-$expected_abi.so"
 install -m644 "$work_dir/plugins/hyprbars/hyprbars.so" "$root_dir/hyprbars-assets/$asset"
@@ -40,6 +43,7 @@ grep -q 'Advanced Micro Devices X86-64' "$root_dir/hyprbars-assets/HYPRBARS-ELF.
 cp "$work_dir/plugins/LICENSE" "$root_dir/hyprbars-assets/HYPRBARS-LICENSE.txt"
 {
   printf 'Hyprbars upstream: https://github.com/hyprwm/hyprland-plugins/tree/%s\nABI: %s\nArch snapshot: 2026/09/30\n' "$plugin_commit" "$expected_abi"
+  sha256sum "$root_dir/scripts/hyprbars/vector-controls.patch" "$root_dir/scripts/hyprbars/FamiliarIcons.hpp"
   c++ --version
   pacman -Q
 } > "$root_dir/hyprbars-assets/HYPRBARS-BUILD.txt"

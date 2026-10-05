@@ -16,24 +16,13 @@ function normalizeDockWidgets(values) {
 }
 
 function addWidgetToDockList(dockWidgetsList, widgetId) {
-    var arr = Array.isArray(dockWidgetsList) ? dockWidgetsList.slice() : [];
-    if (!validWidgetId(widgetId)) return arr;
-
-    // Remove duplicates of the same widgetId
-    for (var i = arr.length - 1; i >= 0; i--) {
-        if (arr[i] === widgetId) arr.splice(i, 1);
-    }
-
-    if (widgetId === "omarchy.apps") {
-        // Add omarchy.apps at the front, keep other non-apps widgets (max 1)
-        var others = arr.filter(function(id) { return id && id !== "omarchy.apps"; });
-        return ["omarchy.apps"].concat(others.slice(0, 1));
-    } else {
-        // Add non-apps widget; preserve omarchy.apps if present, cap others at 1
-        var hasApps = arr.indexOf("omarchy.apps") !== -1;
-        var result = hasApps ? ["omarchy.apps", widgetId] : [widgetId];
-        return result;
-    }
+    var arr = Array.isArray(dockWidgetsList) ? dockWidgetsList.filter(function(id, index, list) {
+        return validWidgetId(id) && list.indexOf(id) === index;
+    }) : [];
+    if (!validWidgetId(widgetId) || arr.indexOf(widgetId) !== -1) return arr;
+    if (widgetId === "omarchy.apps") arr.unshift(widgetId);
+    else arr.push(widgetId);
+    return arr;
 }
 
 function removeWidgetFromDockList(dockWidgetsList, widgetId) {

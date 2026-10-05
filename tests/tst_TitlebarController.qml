@@ -70,6 +70,18 @@ TestCase {
         compare(item.state, "failed")
         verify(item.message.indexOf("timed out") >= 0)
     }
+    function test_palette_change_reapplies_colours() {
+        var item = makeController()
+        var adapter = adapterFor(item)
+        tryCompare(adapter, "running", true)
+        adapter.complete('{"state":"active"}', 0)
+        item.background = "#f0f2f4"
+        item.foreground = "#202830"
+        tryCompare(adapter, "starts", 2)
+        compare(adapter.command[adapter.command.indexOf("--background") + 1], "#f0f2f4")
+        compare(adapter.command[adapter.command.indexOf("--foreground") + 1], "#202830")
+        adapter.complete('{"state":"active"}', 0)
+    }
     function test_teardownUsesConditionalOwnership() {
         Quickshell.detachedCommands = []
         var item = controller.createObject(this)

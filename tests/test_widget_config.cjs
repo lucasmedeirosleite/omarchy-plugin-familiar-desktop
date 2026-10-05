@@ -12,13 +12,13 @@ function load(file) {
 const widgets = load('DockWidgets.js');
 const commands = load('DockCommands.js');
 const plain = value => JSON.parse(JSON.stringify(value));
-assert.deepEqual(plain(widgets.normalizeDockWidgets(['omarchy.apps', 'omarchy.clock', 'omarchy.audio'])), ['omarchy.apps', 'omarchy.audio']);
+assert.deepEqual(plain(widgets.normalizeDockWidgets(['omarchy.apps', 'omarchy.clock', 'omarchy.audio'])), ['omarchy.apps', 'omarchy.clock', 'omarchy.audio']);
 assert.deepEqual(plain(widgets.normalizeDockWidgets(['../../evil', 'x; touch /tmp/evil', 'io.github.tcballard.familiar-desktop'])), []);
 assert.deepEqual(plain(widgets.normalizeDockWidgets([])), []);
-const selection = ['omarchy.apps', 'omarchy.clock'];
+const selection = ['omarchy.apps', 'omarchy.clock', 'omarchy.audio'];
 assert.deepEqual(plain(widgets.getDockWidgetLayout(true, 'left', false, selection, 'right')), { leftWidgets: [], rightWidgets: [] });
-assert.deepEqual(selection, ['omarchy.apps', 'omarchy.clock']);
-assert.deepEqual(plain(widgets.getDockWidgetLayout(true, 'left', true, selection, 'right')), { leftWidgets: ['omarchy.apps'], rightWidgets: ['omarchy.clock'] });
+assert.deepEqual(selection, ['omarchy.apps', 'omarchy.clock', 'omarchy.audio']);
+assert.deepEqual(plain(widgets.getDockWidgetLayout(true, 'left', true, selection, 'right')), { leftWidgets: ['omarchy.apps'], rightWidgets: ['omarchy.clock', 'omarchy.audio'] });
 const args = ['printf', '%s', "spaces ' quotes \" $HOME $(printf INJECTED) `printf INJECTED`\nnext line"];
 let received;
 commands.run({ execArgv(argv) { received = plain(argv); } }, args);
@@ -74,5 +74,25 @@ for (const filename of ['DockPanel.qml', 'BarWidget.qml']) {
   assert.equal(root.titlebarMode, "theme");
   context.saveSettings();
   assert.equal(JSON.parse(disk).titlebarMode, "theme");
+  // Exercise both real readers/writers: old files migrate to Automatic; each
+  // explicit choice survives unrelated edits and a fresh reader state.
+  for (const position of ['auto', 'bottom', 'left', 'right']) {
+    root.isSavingSettings = false;
+    disk = JSON.stringify({ dockPosition: position, profile: 'mac', dockWidgets: selection });
+    context.readSettings();
+    assert.equal(root.dockPosition, position);
+    root.showBadges = false;
+    context.saveSettings();
+    assert.equal(JSON.parse(disk).dockPosition, position);
+    root.isSavingSettings = false;
+    root.dockPosition = 'discarded';
+    context.readSettings();
+    assert.equal(root.dockPosition, position);
+  }
+  root.isSavingSettings = false;
+  disk = '{}';
+  context.readSettings();
+  assert.equal(root.dockPosition, 'auto');
 }
 console.log('both QML settings handlers preserve disabled widget selections: passed');
+console.log('both QML settings handlers preserve dock position: passed');

@@ -12,34 +12,35 @@ Familiar Desktop adds a mouse-friendly app dock to Omarchy Quattro. Launch or re
 
 *Rendered QML preview of the settings modal, using illustrative colours. A live Omarchy screenshot will replace this preview after on-device testing.*
 
-## v0.1.0 test candidate
+## Try v0.1.0-rc.4
 
-This branch prepares **v0.1.0 (not yet published)** for XPS testing. It adds Show Desktop/Restore
-windows, Getting Started with active shortcuts and system settings,
-larger dock/title-bar controls, separate Quit/confirmed Force Quit actions, and
-an opt-in Caps Lock behaviour preference.
+**v0.1.0-rc.4 is the current published test candidate. The formal v0.1.0 release is still being prepared.** It includes dock positioning, Show Desktop/Restore, centred settings, window controls and the Caps Lock fixes for Lua 5.5 and blank Hyprland diagnostics.
 
-Use the prebuilt candidate bundle from this branch’s successful **Release binaries** workflow
-and run `bash install-candidate.sh windows` from its extracted folder (`mac` for
-left-side controls). The bundle installer pins the exact tested commit; no tag
-or stable v0.1.0 release is implied. See [the XPS test and rollback guide](docs/XPS-TEST.md).
-
-Live Omarchy acceptance remains outstanding. Restore windows before disabling,
-removing or downgrading the candidate. The curated app collection (Open/Install
-shortcuts for Paint, Notepad, Task Manager and selected tools) is deferred to
-**v0.2.0**, once each app has a verified package. Installed apps still work with
-the existing dock. See [release preparation](docs/RELEASE-0.1.0.md) and the
-[release-note draft](docs/v0.1.0.md).
-
-## Published v0.0.6 install
-
-Version **0.0.6 is an early preview** for Omarchy Quattro. Live desktop testing remains outstanding. Run this single command in your Omarchy terminal for Mac-style controls:
+Run this in an Omarchy Quattro terminal. It downloads the public ZIP, verifies its checksum and installs the exact candidate commit; no GitHub login is needed.
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/tcballard/omarchy-plugin-familiar-desktop/v0.0.6/install.sh) mac
+bash <<'BASH'
+set -euo pipefail
+command -v unzip >/dev/null || sudo pacman -S --needed unzip
+cd "$(mktemp -d)"
+curl -fL --retry 3 \
+  https://github.com/tcballard/omarchy-plugin-familiar-desktop/releases/download/v0.1.0-rc.4/familiar-v0.1.0-rc.4.zip \
+  -o familiar.zip
+echo 'f7d5fd7593f42bd68688739376860c513cc4198036bfd7b3b1bccc8e4fa7d9f9  familiar.zip' \
+  | sha256sum --check
+unzip -q familiar.zip
+bash install-candidate.sh windows
+omarchy restart shell
+BASH
 ```
 
-Use `windows` instead of `mac` for controls on the right. The same command handles fresh installs and updates, checks out **v0.0.6**, downloads the prebuilt Linux x86_64 Rust backend, verifies its SHA-256 checksum and version, then enables the dock and controls. Cargo, Rustup and Clippy are not needed or installed. Other architectures stop with an explicit error; installation never falls back to a source build. It refuses to overwrite tracked local source changes. Failed backend downloads or verification leave the previous executable intact.
+Use `mac` instead of `windows` for left-side controls. Restore minimised windows before updating. See [the XPS test and rollback guide](docs/XPS-TEST.md). The source and installer hardening on `main` are newer than this immutable ZIP; use the bundle from a successful **Release binaries** run on the exact main commit when testing those changes.
+
+The maintainer has reported that rc.4 looks good on the test desktop. Formal source-bound acceptance and broader monitor, scaling and app coverage remain open; see [release preparation](docs/RELEASE-0.1.0.md). The curated app collection is deferred to **v0.2.0**. Installed apps continue to work with the dock.
+
+## Preparing the formal v0.1.0 installer
+
+The normal `install.sh` on this branch targets the future **v0.1.0** release. Use it only once that tag and its assets are published. It refuses local source changes, untracked files and unexpected ignored files; checks the supported ABI; restores windows on v0.1.0 updates; unloads controls and disables Familiar before checkout; then verifies downloaded binaries before setup and enablement. A failed update stops for repair. Cargo, Rustup and Clippy are not required. The previous [v0.0.6 preview](https://github.com/tcballard/omarchy-plugin-familiar-desktop/releases/tag/v0.0.6) remains available as a historical release.
 
 Window controls also download as a checksum-verified prebuilt Hyprbars library. The initial supported target is Linux x86_64, Hyprland 0.56.2 commit `efb50993780079460b0cbed1363e2166a2de1d9f`, ABI `efb50993780079460b0cbed1363e2166a2de1d9f_aq_0.15_hu_0.14_hg_0.5_hc_0.1_hlg_0.6`. Unsupported ABIs stop before backend installation or title-bar configuration. The normal installer never runs Hyprpm, clones Hyprland, or installs a compiler. Missing assets, checksum failures and loader failures stop setup; they never trigger a source build. Existing Hyprbars ownership protections still apply.
 
@@ -111,7 +112,9 @@ Launching apps uses Omarchy's app launcher, with `uwsm-app` and `gtk-launch` as 
 | **Windows** | Bottom when the bar is elsewhere | Always visible | Reserves space |
 | **Mac** | Bottom when the bar is elsewhere | Reveals on hover | Overlays windows |
 
-If your Omarchy bar is already at the bottom, the dock uses the opposite edge to avoid an overlap. The layout names describe starting behavior; this build does not reproduce a complete Windows taskbar or macOS Dock. After selecting a preset, you can change visibility, workspace targeting, badges and widgets individually. Those adjustments remain until you choose another preset.
+In **Settings → Dock → Dock position**, choose **Automatic**, **Bottom**, **Left** or **Right**. Automatic keeps the starting-layout placement above. Left and Right arrange icons vertically, with menus opening into the screen. Your explicit position survives layout changes and shell restarts. If Omarchy’s bar occupies your chosen edge, Familiar temporarily uses the opposite edge and explains this in settings; your preference takes effect again when that edge is free.
+
+The layout names describe starting behavior; this build does not reproduce a complete Windows taskbar or macOS Dock. After selecting a preset, you can change visibility, workspace targeting, badges and widgets individually. Those adjustments remain until you choose another preset.
 
 ## Controls
 
@@ -133,16 +136,27 @@ omarchy-shell io.github.tcballard.familiar-desktop setProfile windows
 omarchy-shell io.github.tcballard.familiar-desktop setProfile mac
 ```
 
-## Update and remove
+## Clean removal (v0.1.0 candidate)
 
-Rerun the installation command above to install or repair v0.0.6. This checkout stays pinned to its release; use the installer from a newer release when upgrading.
-
-To remove it:
+Settings and generated Lua stay in Familiar-owned files. Optional title bars and
+Caps Lock use small guarded includes in your Hyprland configuration. For verified
+cleanup before deleting the candidate, run:
 
 ```bash
-~/.config/omarchy/plugins/io.github.tcballard.familiar-desktop/bin/familiar-desktop titlebars remove
-omarchy plugin remove io.github.tcballard.familiar-desktop
+bash ~/.config/omarchy/plugins/io.github.tcballard.familiar-desktop/uninstall.sh
 ```
+
+The script restores journalled windows, stops if minimised windows remain, disables
+Familiar, resets Caps Lock, removes the owned title-bar include and unloads Hyprbars
+before removal. Edited hooks or failed reloads stop deletion. Preferences and
+backups remain. It calls the standard `omarchy plugin remove io.github.tcballard.familiar-desktop`
+after cleanup succeeds; running that command directly does not run this cleanup.
+See [separate configuration and rollback](docs/ROLLBACK.md) for exact guarantees,
+legacy migration and XPS acceptance.
+
+## Updates and retained preferences
+
+For rc.4, rerun the candidate command above. For a newer candidate, use its exact bundle and checksum. For removal, use the installed `uninstall.sh` shown above; the generic remove command alone does not perform the owned-configuration cleanup.
 
 The plugin writes `~/.config/omarchy/familiar-desktop-settings.json`, `~/.config/omarchy/familiar-desktop-pinned.json` and `~/.local/state/omarchy/familiar-desktop-badges.json`. Removing it leaves these preferences and badge data in place. Dock widgets appear alongside existing bar widgets. Dock settings only change Familiar Desktop; `shell.json` is read for bar placement and is never written by this plugin. Switching dock widgets off preserves your selection for when you turn them back on. It does not install the [Familiar theme](https://github.com/tcballard/omarchy-theme-familiar), Task Manager or OmaStore.
 
@@ -152,7 +166,7 @@ If you moved bar widgets into the dock using an earlier development build, add t
 
 The manifest declares a hosted service and bar widget under `io.github.tcballard.familiar-desktop`. The source derives from [rosakodu/omarchy-dock](https://github.com/rosakodu/omarchy-dock) at commit `467070386fe60e173295020d3911176202b3e0c9` (MIT). This project has separate identity and settings while retaining that dock's window, monitor, folder and theme handling. See [the product record](PRODUCT.md) for the current scope and next milestones.
 
-Portable plugin validation and the tests in `tests/run` pass. The preview is an isolated QML render; live checks remain: initial installation, preset switching, menu focus and dismissal, minimized windows, two monitors, workspace changes, light and dark themes, 200% scale, shell reload, dock widget persistence and removal. Version 0.0.6 is an early preview; live desktop and marketplace verification remain outstanding. Report bugs through [GitHub issues](https://github.com/tcballard/omarchy-plugin-familiar-desktop/issues); report sensitive security issues privately through the repository's GitHub security advisory feature.
+Portable plugin validation and the tests in `tests/run` pass. The preview is an isolated QML render; live checks remain: initial installation, preset switching, menu focus and dismissal, minimized windows, two monitors, workspace changes, light and dark themes, 200% scale, shell reload, dock widget persistence and removal. Formal v0.1.0 acceptance and marketplace verification remain outstanding. Report bugs or suggest improvements through the [GitHub issue forms](https://github.com/tcballard/omarchy-plugin-familiar-desktop/issues/new/choose); report sensitive security issues privately through the repository's GitHub security advisory feature.
 
 On Omarchy, validate and test the checkout with:
 
@@ -166,7 +180,7 @@ MIT licensed. Original work © 2026 rosakodu; Familiar Desktop changes © 2026 T
 
 ### Window actions and file shortcuts
 
-Version 0.0.6 adds an expanded dock window menu. Select a named window
+Familiar includes an expanded dock window menu. Select a named window
 and use **Go to / restore** to visit it, or **Bring here** to move it to the
 currently focused workspace. Workspace and minimised labels help locate windows.
 **Arrange selected window** offers left/right half, centre, maximise, floating,
@@ -178,7 +192,7 @@ Enable **Home, Downloads and Bin shortcuts** in Familiar settings to add three
 file-manager launchers to the dock. They default to off. Downloads follows
 `xdg-user-dir DOWNLOAD`; opening uses `gio open` and the installed file manager.
 The Bin button opens the bin; it never empties it. Command failures appear in the
-window menu or the file shortcuts' hover tooltip. The version-pinned installer supplies the matching 0.0.6 backend.
+window menu or the file shortcuts' hover tooltip. The version-pinned installer supplies the matching backend.
 
 ### Development builds
 
@@ -193,14 +207,15 @@ special-character sequences. AltGr/Right Alt, Compose on other keys and unrelate
 keyboard options remain intact. Caps-based layout switches and the both-Shift
 Caps Lock shortcut are replaced. Per-device overrides still take precedence.
 
-The explicit preference adds a marked block at the end of
-`~/.config/hypr/hyprland.lua` (or `$XDG_CONFIG_HOME/hypr/hyprland.lua`). It reads the
+The explicit preference is stored in `~/.config/omarchy/familiar-input/caps-lock.lua`.
+A small guarded include is added at the end of
+`~/.config/hypr/hyprland.lua` (or `$XDG_CONFIG_HOME/hypr/hyprland.lua`). The separate Lua file reads the
 configured keyboard options on each reload and login; `input.lua` and Omarchy
 core files are never edited. Familiar checks the reload and restores the previous
 configuration if applying the preference fails. Backups are kept under
 `${XDG_STATE_HOME:-~/.local/state}/omarchy/familiar-caps-lock/`.
 
-**Use configuration** removes only that block and reloads your current personal
+**Use configuration** removes that include and generated keyboard file, then reloads your current personal
 configuration. The preference persists when the Familiar UI is disabled; reset it
 before downgrading or removing Familiar. If the plugin is removed without reset,
 the block becomes inactive when Hyprland next reloads because the plugin manifest

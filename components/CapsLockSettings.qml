@@ -50,6 +50,7 @@ ColumnLayout {
         color: Color.popups.text
     }
     ActionButton {
+        Layout.fillWidth: true
         text: "Refresh keyboard preference"
         enabled: !!root.controller && !root.controller.busy
         onClicked: root.controller.run("status")

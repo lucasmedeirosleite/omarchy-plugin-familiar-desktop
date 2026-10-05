@@ -43,23 +43,14 @@ Item {
         return false
     }
 
-    // Live bar position (only used to position the dock on the opposite side of the screen)
-    property string barPosition: {
-        var actual = (shell && shell.bar && shell.bar.position) ? shell.bar.position : detectedBarPosition
-        // The familiar layouts prefer the bottom; respect an existing bottom
-        // bar by falling back to the opposite edge instead of overlapping it.
-        return root.profile !== "general" && actual !== "bottom" ? "top" : actual
-    }
-    readonly property bool isVertical: barPosition === "left" || barPosition === "right"
-
-    // Live dock edge on screen (opposite to system status bar)
-    readonly property string dockScreenPosition: {
-        if (root.barPosition === "top") return "bottom"
-        if (root.barPosition === "bottom") return "top"
-        if (root.barPosition === "left") return "right"
-        if (root.barPosition === "right") return "left"
-        return "bottom"
-    }
+    readonly property string systemBarPosition: (shell && shell.bar && shell.bar.position)
+        ? shell.bar.position : detectedBarPosition
+    readonly property string dockScreenPosition: DockSettings.resolveDockPosition(
+        root.dockPosition, root.profile, root.systemBarPosition)
+    readonly property bool isVertical: dockScreenPosition === "left" || dockScreenPosition === "right"
+    // Existing surfaces, animations and menus use the opposite edge as their
+    // layout origin. It is independent of the real system bar for manual placement.
+    readonly property string barPosition: DockSettings.oppositeEdge(dockScreenPosition)
 
     // Live Bar & Tray Transparency Tracking (Auto-syncs dock with bar & tray glassmorphism)
     readonly property bool isBarTransparent: {
@@ -434,6 +425,7 @@ Item {
     // Dock visibility, placement, and folder settings
     property string settingsPath: Quickshell.env("HOME") + "/.config/omarchy/familiar-desktop-settings.json"
     property string dockSize: "default"
+    property string dockPosition: "auto"
     property string titlebarSize: "default"
     property bool titlebarsEnabled: false
     property string titlebarMode: "theme"
@@ -450,8 +442,8 @@ Item {
         style: root.titlebarStyle
         exclusions: root.titlebarExclusions
         size: root.titlebarSize
-        background: Color.background
-        foreground: Color.text
+        background: Color.popups.background
+        foreground: Color.popups.text
         fontFamily: Style.font.family
         fontSize: Math.max(8, Math.min(32, Style.font.subtitle))
     }
@@ -1033,6 +1025,7 @@ Item {
                 root.fileShortcutsEnabled = s.fileShortcutsEnabled === true
                 var normalized = DockSettings.normalize(s)
                 root.profile = normalized.profile
+                root.dockPosition = normalized.dockPosition
                 root.dockSize = normalized.dockSize
                 root.titlebarSize = normalized.titlebarSize
                 root.titlebarsEnabled = normalized.titlebarsEnabled
@@ -1094,6 +1087,7 @@ Item {
         saveSettingsTimer.restart()
         var jsonStr = JSON.stringify({
             profile: root.profile,
+            dockPosition: root.dockPosition,
             dockSize: root.dockSize,
             titlebarSize: root.titlebarSize,
             titlebarsEnabled: root.titlebarsEnabled,
@@ -1650,6 +1644,12 @@ Item {
     property string lastRemapBarPosition: ""
     onBarPositionChanged: {
         if (root.lastRemapBarPosition !== root.barPosition) {
+            if (root.lastRemapBarPosition !== "") {
+                root.closePopups()
+                root.contextAppId = ""
+                root.dockDragActiveIndex = -1
+                root.dockDragTargetIndex = -1
+            }
             root.lastRemapBarPosition = root.barPosition
             // Drop the sticky hover flag before the surfaces are rebuilt: the
             // pointer cannot be over a dock that does not exist yet, and the
@@ -3029,7 +3029,7 @@ Item {
                                 font.family: Style.font.family
                                 font.pixelSize: 12
                                 font.weight: Font.Medium
-                                color: leftWidgetSlotMouse.containsMouse ? Color.accent : Color.composed("popups.text", "popups.text-alpha", Color.text, 0.95)
+                                color: leftWidgetSlotMouse.containsMouse ? Color.accent : Color.bar.text
                                 renderType: Text.CurveRendering
                                 font.hintingPreference: Font.PreferNoHinting
                                 Behavior on color { ColorAnimation { duration: 120 } }
@@ -3052,7 +3052,7 @@ Item {
                                         font.family: Style.font.family
                                         font.pixelSize: modelData.length > 3 ? 9 : 10
                                         font.weight: Font.Medium
-                                        color: leftWidgetSlotMouse.containsMouse ? Color.accent : Color.composed("popups.text", "popups.text-alpha", Color.text, 0.95)
+                                        color: leftWidgetSlotMouse.containsMouse ? Color.accent : Color.bar.text
                                         renderType: Text.CurveRendering
                                         font.hintingPreference: Font.PreferNoHinting
                                     }
@@ -3078,7 +3078,7 @@ Item {
                                 }
                                 fontFamily: (leftWidgetLoader.item && leftWidgetLoader.item.fontFamily) ? leftWidgetLoader.item.fontFamily : ((leftWidgetLoader.item && leftWidgetLoader.item.font && leftWidgetLoader.item.font.family) ? leftWidgetLoader.item.font.family : Style.font.family)
                                 fontSize: 22
-                                color: leftWidgetSlotMouse.containsMouse ? Color.accent : Color.composed("popups.text", "popups.text-alpha", Color.text, 0.95)
+                                color: leftWidgetSlotMouse.containsMouse ? Color.accent : Color.bar.text
                                 Behavior on color { ColorAnimation { duration: 120 } }
                             }
 
@@ -3154,7 +3154,7 @@ Item {
                         width: root.isVertical ? (root.slotSize - 18) : 1.5
                         height: root.isVertical ? 1.5 : (root.slotSize - 18)
                         radius: 0.75
-                        color: Color.composed("popups.border", "popups.border-alpha", Color.border, 0.45)
+                        color: Util.alpha(Color.bar.text, 0.25)
                     }
                 }
 
@@ -3303,7 +3303,7 @@ Item {
                         width: root.isVertical ? (root.slotSize - 18) : 1.5
                         height: root.isVertical ? 1.5 : (root.slotSize - 18)
                         radius: 0.75
-                        color: Color.composed("popups.border", "popups.border-alpha", Color.border, 0.45)
+                        color: Util.alpha(Color.bar.text, 0.25)
                     }
                 }
 
@@ -3342,7 +3342,7 @@ Item {
                                 font.family: Style.font.family
                                 font.pixelSize: 12
                                 font.weight: Font.Medium
-                                color: rightWidgetSlotMouse.containsMouse ? Color.accent : Color.composed("popups.text", "popups.text-alpha", Color.text, 0.95)
+                                color: rightWidgetSlotMouse.containsMouse ? Color.accent : Color.bar.text
                                 renderType: Text.CurveRendering
                                 font.hintingPreference: Font.PreferNoHinting
                                 Behavior on color { ColorAnimation { duration: 120 } }
@@ -3365,7 +3365,7 @@ Item {
                                         font.family: Style.font.family
                                         font.pixelSize: modelData.length > 3 ? 9 : 10
                                         font.weight: Font.Medium
-                                        color: rightWidgetSlotMouse.containsMouse ? Color.accent : Color.composed("popups.text", "popups.text-alpha", Color.text, 0.95)
+                                        color: rightWidgetSlotMouse.containsMouse ? Color.accent : Color.bar.text
                                         renderType: Text.CurveRendering
                                         font.hintingPreference: Font.PreferNoHinting
                                     }
@@ -3391,7 +3391,7 @@ Item {
                                 }
                                 fontFamily: (rightWidgetLoader.item && rightWidgetLoader.item.fontFamily) ? rightWidgetLoader.item.fontFamily : ((rightWidgetLoader.item && rightWidgetLoader.item.font && rightWidgetLoader.item.font.family) ? rightWidgetLoader.item.font.family : Style.font.family)
                                 fontSize: 22
-                                color: rightWidgetSlotMouse.containsMouse ? Color.accent : Color.composed("popups.text", "popups.text-alpha", Color.text, 0.95)
+                                color: rightWidgetSlotMouse.containsMouse ? Color.accent : Color.bar.text
                                 Behavior on color { ColorAnimation { duration: 120 } }
                             }
 

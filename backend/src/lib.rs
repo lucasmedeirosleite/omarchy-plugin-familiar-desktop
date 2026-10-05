@@ -1,4 +1,5 @@
 pub mod common;
+pub mod config_file;
 pub mod dock;
 pub mod titlebars;
 pub type Result<T> = std::result::Result<T, String>;
