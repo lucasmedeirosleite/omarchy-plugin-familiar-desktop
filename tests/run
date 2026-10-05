@@ -9,3 +9,4 @@ node tests/test_uninstall.cjs
 node tests/test_install.cjs
 
 node tests/test_candidate_install.cjs
+node tests/test_release_tag.cjs
