@@ -12,35 +12,21 @@ Familiar Desktop adds a mouse-friendly app dock to Omarchy Quattro. Launch or re
 
 *Rendered QML preview of the settings modal, using illustrative colours. A live Omarchy screenshot will replace this preview after on-device testing.*
 
-## Try v0.1.0-rc.4
+## Install v0.1.0
 
-**v0.1.0-rc.4 is the current published test candidate. The formal v0.1.0 release is still being prepared.** It includes dock positioning, Show Desktop/Restore, centred settings, window controls and the Caps Lock fixes for Lua 5.5 and blank Hyprland diagnostics.
+Familiar v0.1.0 includes dock positioning, Show Desktop/Restore, centred settings, optional window controls and an explicit Caps Lock/Compose preference.
 
-Run this in an Omarchy Quattro terminal. It downloads the public ZIP, verifies its checksum and installs the exact candidate commit; no GitHub login is needed.
+Run this in an Omarchy Quattro terminal for Windows-style controls on the right:
 
 ```bash
-bash <<'BASH'
-set -euo pipefail
-command -v unzip >/dev/null || sudo pacman -S --needed unzip
-cd "$(mktemp -d)"
-curl -fL --retry 3 \
-  https://github.com/tcballard/omarchy-plugin-familiar-desktop/releases/download/v0.1.0-rc.4/familiar-v0.1.0-rc.4.zip \
-  -o familiar.zip
-echo 'f7d5fd7593f42bd68688739376860c513cc4198036bfd7b3b1bccc8e4fa7d9f9  familiar.zip' \
-  | sha256sum --check
-unzip -q familiar.zip
-bash install-candidate.sh windows
-omarchy restart shell
-BASH
+bash <(curl -fsSL https://raw.githubusercontent.com/tcballard/omarchy-plugin-familiar-desktop/v0.1.0/install.sh) windows
 ```
 
-Use `mac` instead of `windows` for left-side controls. Restore minimised windows before updating. See [the XPS test and rollback guide](docs/XPS-TEST.md). The source and installer hardening on `main` are newer than this immutable ZIP; use the bundle from a successful **Release binaries** run on the exact main commit when testing those changes.
+Use `mac` instead of `windows` for controls on the left. The command installs or updates to the exact release and downloads prebuilt, checksum-verified Linux x86_64 components. No GitHub login, Cargo, Rustup or Clippy is required. Restore minimised windows first; then run `omarchy restart shell` to reload updated UI components.
 
-The maintainer has reported that rc.4 looks good on the test desktop. Formal source-bound acceptance and broader monitor, scaling and app coverage remain open; see [release preparation](docs/RELEASE-0.1.0.md). The curated app collection is deferred to **v0.2.0**. Installed apps continue to work with the dock.
+The installer refuses local source changes, untracked files and unexpected ignored files. It checks compatibility, restores windows on v0.1.0 updates, unloads controls and disables Familiar before checkout, then verifies binaries before setup and enablement. A failed update stops for repair. Missing download tools may prompt for a package-manager password.
 
-## Preparing the formal v0.1.0 installer
-
-The normal `install.sh` on this branch targets the future **v0.1.0** release. Use it only once that tag and its assets are published. It refuses local source changes, untracked files and unexpected ignored files; checks the supported ABI; restores windows on v0.1.0 updates; unloads controls and disables Familiar before checkout; then verifies downloaded binaries before setup and enablement. A failed update stops for repair. Cargo, Rustup and Clippy are not required. The previous [v0.0.6 preview](https://github.com/tcballard/omarchy-plugin-familiar-desktop/releases/tag/v0.0.6) remains available as a historical release.
+The maintainer tested rc.5 on an XPS and approved the desktop for release. Runtime source is unchanged from that candidate; release preparation updates documentation and tag automation. Broader monitor, scaling and app coverage remains open. See [release notes](docs/v0.1.0.md) and [validation evidence](docs/RELEASE-0.1.0.md). The curated app collection is planned for v0.2.0; installed apps continue to work with the dock.
 
 Window controls also download as a checksum-verified prebuilt Hyprbars library. The initial supported target is Linux x86_64, Hyprland 0.56.2 commit `efb50993780079460b0cbed1363e2166a2de1d9f`, ABI `efb50993780079460b0cbed1363e2166a2de1d9f_aq_0.15_hu_0.14_hg_0.5_hc_0.1_hlg_0.6`. Unsupported ABIs stop before backend installation or title-bar configuration. The normal installer never runs Hyprpm, clones Hyprland, or installs a compiler. Missing assets, checksum failures and loader failures stop setup; they never trigger a source build. Existing Hyprbars ownership protections still apply.
 
@@ -136,11 +122,11 @@ omarchy-shell io.github.tcballard.familiar-desktop setProfile windows
 omarchy-shell io.github.tcballard.familiar-desktop setProfile mac
 ```
 
-## Clean removal (v0.1.0 candidate)
+## Clean removal
 
 Settings and generated Lua stay in Familiar-owned files. Optional title bars and
 Caps Lock use small guarded includes in your Hyprland configuration. For verified
-cleanup before deleting the candidate, run:
+cleanup before deleting Familiar, run:
 
 ```bash
 bash ~/.config/omarchy/plugins/io.github.tcballard.familiar-desktop/uninstall.sh
@@ -156,7 +142,7 @@ legacy migration and XPS acceptance.
 
 ## Updates and retained preferences
 
-For rc.4, rerun the candidate command above. For a newer candidate, use its exact bundle and checksum. For removal, use the installed `uninstall.sh` shown above; the generic remove command alone does not perform the owned-configuration cleanup.
+Rerun the versioned installation command above to install or repair v0.1.0. Use the installer from a newer release when upgrading. For removal, use the installed `uninstall.sh` shown above; the generic remove command alone does not perform the owned-configuration cleanup.
 
 The plugin writes `~/.config/omarchy/familiar-desktop-settings.json`, `~/.config/omarchy/familiar-desktop-pinned.json` and `~/.local/state/omarchy/familiar-desktop-badges.json`. Removing it leaves these preferences and badge data in place. Dock widgets appear alongside existing bar widgets. Dock settings only change Familiar Desktop; `shell.json` is read for bar placement and is never written by this plugin. Switching dock widgets off preserves your selection for when you turn them back on. It does not install the [Familiar theme](https://github.com/tcballard/omarchy-theme-familiar), Task Manager or OmaStore.
 
@@ -166,7 +152,7 @@ If you moved bar widgets into the dock using an earlier development build, add t
 
 The manifest declares a hosted service and bar widget under `io.github.tcballard.familiar-desktop`. The source derives from [rosakodu/omarchy-dock](https://github.com/rosakodu/omarchy-dock) at commit `467070386fe60e173295020d3911176202b3e0c9` (MIT). This project has separate identity and settings while retaining that dock's window, monitor, folder and theme handling. See [the product record](PRODUCT.md) for the current scope and next milestones.
 
-Portable plugin validation and the tests in `tests/run` pass. The preview is an isolated QML render; live checks remain: initial installation, preset switching, menu focus and dismissal, minimized windows, two monitors, workspace changes, light and dark themes, 200% scale, shell reload, dock widget persistence and removal. Formal v0.1.0 acceptance and marketplace verification remain outstanding. Report bugs or suggest improvements through the [GitHub issue forms](https://github.com/tcballard/omarchy-plugin-familiar-desktop/issues/new/choose); report sensitive security issues privately through the repository's GitHub security advisory feature.
+Portable plugin validation and the tests in `tests/run` pass. The maintainer approved rc.5 after XPS testing. The preview is an isolated QML render. We do not claim exhaustive coverage of multi-monitor hotplug, mixed scaling, every application or fresh-profile install/removal. Marketplace verification remains separate from the release. Report bugs or suggest improvements through the [GitHub issue forms](https://github.com/tcballard/omarchy-plugin-familiar-desktop/issues/new/choose); report sensitive security issues privately through the repository's GitHub security advisory feature.
 
 On Omarchy, validate and test the checkout with:
 

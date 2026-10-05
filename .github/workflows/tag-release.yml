@@ -1,0 +1,46 @@
+name: Tag verified release
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: tag-verified-release
+  cancel-in-progress: false
+jobs:
+  tag:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - name: Require green main and create an immutable annotated tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SOURCE_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh api "repos/$GH_REPO/git/ref/heads/main" --jq .object.sha)" = "$SOURCE_SHA"
+          gh api "repos/$GH_REPO/actions/runs?head_sha=$SOURCE_SHA&event=push&per_page=100" > /tmp/release-runs.json
+          for workflow in portable.yml release.yml; do
+            jq -e --arg path ".github/workflows/$workflow" --arg sha "$SOURCE_SHA" '
+              [.workflow_runs[] | select(.path == $path and .head_sha == $sha)]
+              | sort_by(.id) | last
+              | .status == "completed" and .conclusion == "success"
+            ' /tmp/release-runs.json
+          done
+          version="$(jq -r .version manifest.json)"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          tag="v$version"
+          git fetch origin --tags
+          if git show-ref --verify --quiet "refs/tags/$tag"; then
+            echo "Tag $tag already exists; refusing to replace it." >&2
+            exit 1
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -a "$tag" "$SOURCE_SHA" -m "Familiar $tag; verified main $SOURCE_SHA"
+          git push origin "refs/tags/$tag"
