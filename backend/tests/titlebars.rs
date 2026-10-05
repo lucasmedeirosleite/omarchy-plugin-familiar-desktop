@@ -418,6 +418,9 @@ fn render_quotes_paths_classes_and_button_actions() {
     assert!(text.contains("a\\\";"));
     assert!(text.contains("familiar-desktop' titlebars action"));
     assert!(!text.contains("python"));
+    // The pinned Hyprbars revision registers icon_on_hover, not buttons_on_hover.
+    assert!(!text.contains("buttons_on_hover"));
+    assert!(text.contains("icon_on_hover = false"));
 }
 #[test]
 fn styles_change_order_and_alignment() {

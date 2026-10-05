@@ -343,8 +343,11 @@ BarWidget {
     anchorItem: button
     owner: root
     bar: root.bar
-    contentWidth: Style.space(410)
+    contentWidth: Style.space(800)
     contentHeight: cardColumn.implicitHeight
+    onPageChanged: {
+      if (page === "help" && root.desktopTools && !root.desktopTools.busy) root.desktopTools.run(["shortcuts"])
+    }
 
     ColumnLayout {
       id: cardColumn
@@ -353,6 +356,10 @@ BarWidget {
       anchors.top: parent.top
       spacing: 10
 
+        ColumnLayout {
+          Layout.fillWidth: true
+          visible: settingsWindow.page === "general"
+          spacing: Style.space(16)
         Text {
           text: "Choose a starting layout. You can adjust the controls below."
           textFormat: Text.PlainText
@@ -427,17 +434,9 @@ BarWidget {
           font.pixelSize: 12
           color: Color.popups.text
         }
-        ActionButton {
-          Layout.fillWidth: true
-          text: root.gettingStartedOpen ? "Close Getting Started" : "Getting Started · shortcuts and useful tools"
-          enabled: !!root.desktopTools && !root.desktopTools.busy
-          onClicked: {
-            root.gettingStartedOpen = !root.gettingStartedOpen
-            if (root.gettingStartedOpen) root.desktopTools.run(["shortcuts"])
-          }
         }
         GettingStarted {
-          visible: root.gettingStartedOpen
+          visible: settingsWindow.page === "help"
           Layout.fillWidth: true
           tools: root.desktopTools
         }
@@ -445,6 +444,7 @@ BarWidget {
           model: [{key: "dockSize", label: "Dock and icons"}, {key: "titlebarSize", label: "Title bars and buttons"}]
           delegate: ColumnLayout {
             id: sizeRow
+            visible: settingsWindow.page === (modelData.key === "dockSize" ? "dock" : "windows")
             required property var modelData
             Layout.fillWidth: true
             Text {
@@ -471,45 +471,13 @@ BarWidget {
         }
 
         CapsLockSettings {
+          visible: settingsWindow.page === "keyboard"
           Layout.fillWidth: true
           controller: root.desktopService ? root.desktopService.capsLock : null
         }
 
-        // Window controls share this plugin's settings and minimise/restore path.
-        Rectangle {
-          Layout.fillWidth: true
-          height: 34
-          radius: 7
-          color: titlebarHeaderMouse.containsMouse ? Style.hoverFillFor(Color.popups.text, Color.accent) : "transparent"
-          Text {
-            anchors.left: parent.left
-            anchors.leftMargin: 10
-            anchors.verticalCenter: parent.verticalCenter
-            text: "Window controls"
-            font.family: Style.font.family
-            font.pixelSize: 12
-            font.bold: true
-            color: Color.popups.text
-          }
-          Text {
-            anchors.right: parent.right
-            anchors.rightMargin: 10
-            anchors.verticalCenter: parent.verticalCenter
-            text: (root.titlebarMode === "theme" ? "Theme" : root.titlebarMode === "off" ? "Off" : "On") + (root.titlebarOptionsOpen ? "  ▴" : "  ▾")
-            font.family: Style.font.family
-            font.pixelSize: 12
-            color: Color.popups.text
-          }
-          MouseArea {
-            id: titlebarHeaderMouse
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: root.titlebarOptionsOpen = !root.titlebarOptionsOpen
-          }
-        }
         ColumnLayout {
-          visible: root.titlebarOptionsOpen
+          visible: settingsWindow.page === "windows"
           Layout.fillWidth: true
           spacing: 6
           Text {
@@ -650,9 +618,23 @@ BarWidget {
           }
         }
 
+        ColumnLayout {
+          Layout.fillWidth: true
+          visible: settingsWindow.page === "dock"
+          spacing: Style.space(8)
         // 1. Enable dock toggle row
         Rectangle {
           id: dockEnabledRow
+          activeFocusOnTab: true
+          Accessible.role: Accessible.CheckBox
+          Accessible.name: "Enable dock"
+          Accessible.checkable: true
+          Accessible.checked: root.dockEnabled
+          Accessible.onPressAction: root.setDockEnabled(!root.dockEnabled)
+          Keys.onSpacePressed: root.setDockEnabled(!root.dockEnabled)
+          Keys.onReturnPressed: root.setDockEnabled(!root.dockEnabled)
+          border.width: activeFocus ? 2 : 0
+          border.color: Color.accent
           Layout.fillWidth: true
           height: 42
           radius: 8
@@ -761,6 +743,16 @@ BarWidget {
         // 3. Autohide dock (edge hover)
         Rectangle {
           id: autohideRow
+          activeFocusOnTab: true
+          Accessible.role: Accessible.CheckBox
+          Accessible.name: "Autohide dock"
+          Accessible.checkable: true
+          Accessible.checked: autohideRow.active
+          Accessible.onPressAction: root.setAutohide(!autohideRow.active)
+          Keys.onSpacePressed: root.setAutohide(!autohideRow.active)
+          Keys.onReturnPressed: root.setAutohide(!autohideRow.active)
+          border.width: activeFocus ? 2 : 0
+          border.color: Color.accent
           Layout.fillWidth: true
           height: 42
           radius: 8
@@ -842,6 +834,16 @@ BarWidget {
         // 4. Keyboard shortcut toggle
         Rectangle {
           id: keybindRow
+          activeFocusOnTab: true
+          Accessible.role: Accessible.CheckBox
+          Accessible.name: "Keyboard shortcut"
+          Accessible.checkable: true
+          Accessible.checked: keybindRow.active
+          Accessible.onPressAction: root.setKeybindMode(!keybindRow.active)
+          Keys.onSpacePressed: root.setKeybindMode(!keybindRow.active)
+          Keys.onReturnPressed: root.setKeybindMode(!keybindRow.active)
+          border.width: activeFocus ? 2 : 0
+          border.color: Color.accent
           Layout.fillWidth: true
           height: 42
           radius: 8
@@ -1022,6 +1024,16 @@ BarWidget {
         // Toggle Overlay Mode Row
         Rectangle {
           id: overlayRow
+          activeFocusOnTab: true
+          Accessible.role: Accessible.CheckBox
+          Accessible.name: "Overlay mode"
+          Accessible.checkable: true
+          Accessible.checked: root.overlayMode
+          Accessible.onPressAction: root.setOverlayMode(!root.overlayMode)
+          Keys.onSpacePressed: root.setOverlayMode(!root.overlayMode)
+          Keys.onReturnPressed: root.setOverlayMode(!root.overlayMode)
+          border.width: activeFocus ? 2 : 0
+          border.color: Color.accent
           Layout.fillWidth: true
           height: 42
           radius: 8
@@ -1100,6 +1112,16 @@ BarWidget {
         // Toggle Notification Badges Row
         Rectangle {
           id: badgesRow
+          activeFocusOnTab: true
+          Accessible.role: Accessible.CheckBox
+          Accessible.name: "Notification badges"
+          Accessible.checkable: true
+          Accessible.checked: root.showBadges
+          Accessible.onPressAction: root.setShowBadges(!root.showBadges)
+          Keys.onSpacePressed: root.setShowBadges(!root.showBadges)
+          Keys.onReturnPressed: root.setShowBadges(!root.showBadges)
+          border.width: activeFocus ? 2 : 0
+          border.color: Color.accent
           Layout.fillWidth: true
           height: 42
           radius: 8
@@ -1178,6 +1200,16 @@ BarWidget {
         // Toggle Widgets in Dock Row
         Rectangle {
           id: widgetsRow
+          activeFocusOnTab: true
+          Accessible.role: Accessible.CheckBox
+          Accessible.name: "Dock widgets"
+          Accessible.checkable: true
+          Accessible.checked: root.widgetsEnabled
+          Accessible.onPressAction: root.setWidgetsEnabled(!root.widgetsEnabled)
+          Keys.onSpacePressed: root.setWidgetsEnabled(!root.widgetsEnabled)
+          Keys.onReturnPressed: root.setWidgetsEnabled(!root.widgetsEnabled)
+          border.width: activeFocus ? 2 : 0
+          border.color: Color.accent
           Layout.fillWidth: true
           height: 42
           radius: 8
@@ -1299,6 +1331,7 @@ BarWidget {
               }
             }
           }
+        }
         }
       }
     }

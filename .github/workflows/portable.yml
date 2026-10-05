@@ -39,7 +39,7 @@ jobs:
           name: familiar-desktop-linux-x86_64
           path: bin/familiar-desktop
       - name: Install Qt test runner
-        run: sudo apt-get update && sudo apt-get install -y qt6-declarative-dev-tools qml6-module-qttest qml6-module-qtquick qml6-module-qtquick-window qml6-module-qtqml-workerscript
+        run: sudo apt-get update && sudo apt-get install -y qt6-declarative-dev-tools qml6-module-qttest qml6-module-qtquick qml6-module-qtquick-window qml6-module-qtqml-workerscript qml6-module-qtquick-controls qml6-module-qtquick-layouts qml6-module-qtquick-templates
       - name: Run QML unit tests
         env:
           QT_QPA_PLATFORM: offscreen

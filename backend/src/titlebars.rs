@@ -281,7 +281,7 @@ pub fn render(paths: &Paths, library: &Path, o: &Value) -> Result<String> {
         lua(&library.to_string_lossy())
     );
     s += &format!(
-        "  enabled = true, bar_height = {}, bar_text_size = {},\n  bar_title_enabled = true, bar_text_font = {}, bar_text_align = {},\n  bar_color = {}, ['col.text'] = {},\n  bar_buttons_alignment = {},\n  bar_padding = {}, bar_button_padding = {}, bar_part_of_window = true,\n  buttons_on_hover = false, icon_on_hover = false,\n  on_double_click = {},\n}} }} }})\n",
+        "  enabled = true, bar_height = {}, bar_text_size = {},\n  bar_title_enabled = true, bar_text_font = {}, bar_text_align = {},\n  bar_color = {}, ['col.text'] = {},\n  bar_buttons_alignment = {},\n  bar_padding = {}, bar_button_padding = {}, bar_part_of_window = true,\n  icon_on_hover = false,\n  on_double_click = {},\n}} }} }})\n",
         o["height"],
         o["fontSize"],
         lua(o["fontFamily"].as_str().ok_or("Missing font")?),
