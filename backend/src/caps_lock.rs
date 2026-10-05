@@ -159,6 +159,13 @@ fn reload(hypr: &mut impl Hypr) -> Result<()> {
     checked(hypr, &["reload"])?;
     let errors: Vec<String> = serde_json::from_str(&hypr.command(&["-j", "configerrors"])?)
         .map_err(|_| "Could not verify Hyprland configuration errors")?;
+    // Hyprland 0.56.2 / Hyprutils 0.14 serialises an empty error string as [""].
+    // Ignore blank entries only; malformed responses and real diagnostics still fail.
+    let errors: Vec<&str> = errors
+        .iter()
+        .map(|error| error.trim())
+        .filter(|error| !error.is_empty())
+        .collect();
     if !errors.is_empty() {
         return Err(format!(
             "Hyprland configuration error: {}",
