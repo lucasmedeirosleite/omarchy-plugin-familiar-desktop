@@ -45,9 +45,16 @@ pub fn hook(mode: &str, manifest: &Path) -> Result<String> {
         _ => return Err("Choose normal, compose or reset".into()),
     };
     Ok(format!(
-        "{BEGIN}-- mode: {mode}\ndo\n  local plugin = io.open({}, \"r\")\n  if plugin then\n    plugin:close()\n    local options = {{}}\n    for option in (hl.get_config(\"input.kb_options\") or \"\"):gmatch(\"[^,]+\") do\n      option = option:match(\"^%s*(.-)%s*$\")\n      if not option:find(\"caps\", 1, true) then\n        table.insert(options, option)\n      end\n    end\n    table.insert(options, \"{option}\")\n    hl.config({{ input = {{ kb_options = table.concat(options, \",\") }} }})\n  end\nend\n{END}",
+        "{BEGIN}-- mode: {mode}\ndo\n  local plugin = io.open({}, \"r\")\n  if plugin then\n    plugin:close()\n    local options = {{}}\n    for raw_option in (hl.get_config(\"input.kb_options\") or \"\"):gmatch(\"[^,]+\") do\n      local option = raw_option:match(\"^%s*(.-)%s*$\")\n      if not option:find(\"caps\", 1, true) then\n        table.insert(options, option)\n      end\n    end\n    table.insert(options, \"{option}\")\n    hl.config({{ input = {{ kb_options = table.concat(options, \",\") }} }})\n  end\nend\n{END}",
         common::lua(&manifest.to_string_lossy())
     ))
+}
+
+// Recognise the exact pre-rc.3 template for migration/removal, never execute it.
+fn legacy_hook(mode: &str, manifest: &Path) -> Result<String> {
+    Ok(hook(mode, manifest)?
+        .replace("for raw_option in", "for option in")
+        .replace("local option = raw_option:match", "option = option:match"))
 }
 
 // Only this stable, guarded include lives in the user's main configuration.
@@ -66,10 +73,14 @@ fn generated_content(paths: &Paths) -> Result<Option<String>> {
         Err(e) => Err(e.to_string()),
         Ok(_) => {
             let value = text(&paths.generated)?;
-            if !["normal", "compose"]
+            if !["normal", "compose"].iter().any(|mode| {
+                [
+                    hook(mode, &paths.manifest),
+                    legacy_hook(mode, &paths.manifest),
+                ]
                 .iter()
-                .any(|mode| hook(mode, &paths.manifest).ok().as_ref() == Some(&value))
-            {
+                .any(|candidate| candidate.as_ref().ok() == Some(&value))
+            }) {
                 return Err(
                     "Familiar's separate keyboard config was edited; no file changed".into(),
                 );
@@ -131,12 +142,13 @@ pub fn split(text: &str, manifest: &Path) -> Result<(String, String)> {
     }
     if starts == 1 && ends == 1 {
         for mode in ["normal", "compose"] {
-            let block = hook(mode, manifest)?;
-            if let Some(start) = text.find(&block) {
-                return Ok((
-                    format!("{}{}", &text[..start], &text[start + block.len()..]),
-                    mode.into(),
-                ));
+            for block in [hook(mode, manifest)?, legacy_hook(mode, manifest)?] {
+                if let Some(start) = text.find(&block) {
+                    return Ok((
+                        format!("{}{}", &text[..start], &text[start + block.len()..]),
+                        mode.into(),
+                    ));
+                }
             }
         }
     }
