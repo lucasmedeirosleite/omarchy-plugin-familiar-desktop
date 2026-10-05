@@ -12,13 +12,13 @@ function load(file) {
 const widgets = load('DockWidgets.js');
 const commands = load('DockCommands.js');
 const plain = value => JSON.parse(JSON.stringify(value));
-assert.deepEqual(plain(widgets.normalizeDockWidgets(['omarchy.apps', 'omarchy.clock', 'omarchy.audio'])), ['omarchy.apps', 'omarchy.audio']);
+assert.deepEqual(plain(widgets.normalizeDockWidgets(['omarchy.apps', 'omarchy.clock', 'omarchy.audio'])), ['omarchy.apps', 'omarchy.clock', 'omarchy.audio']);
 assert.deepEqual(plain(widgets.normalizeDockWidgets(['../../evil', 'x; touch /tmp/evil', 'io.github.tcballard.familiar-desktop'])), []);
 assert.deepEqual(plain(widgets.normalizeDockWidgets([])), []);
-const selection = ['omarchy.apps', 'omarchy.clock'];
+const selection = ['omarchy.apps', 'omarchy.clock', 'omarchy.audio'];
 assert.deepEqual(plain(widgets.getDockWidgetLayout(true, 'left', false, selection, 'right')), { leftWidgets: [], rightWidgets: [] });
-assert.deepEqual(selection, ['omarchy.apps', 'omarchy.clock']);
-assert.deepEqual(plain(widgets.getDockWidgetLayout(true, 'left', true, selection, 'right')), { leftWidgets: ['omarchy.apps'], rightWidgets: ['omarchy.clock'] });
+assert.deepEqual(selection, ['omarchy.apps', 'omarchy.clock', 'omarchy.audio']);
+assert.deepEqual(plain(widgets.getDockWidgetLayout(true, 'left', true, selection, 'right')), { leftWidgets: ['omarchy.apps'], rightWidgets: ['omarchy.clock', 'omarchy.audio'] });
 const args = ['printf', '%s', "spaces ' quotes \" $HOME $(printf INJECTED) `printf INJECTED`\nnext line"];
 let received;
 commands.run({ execArgv(argv) { received = plain(argv); } }, args);

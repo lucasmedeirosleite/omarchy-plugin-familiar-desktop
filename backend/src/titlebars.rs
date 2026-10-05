@@ -153,7 +153,7 @@ pub fn theme_policy(document: &Value, args: &Args) -> Result<Value> {
     let theme = theme
         .as_object()
         .ok_or("Theme titlebars must be an object")?;
-    let mut options = json!({"enabled":false,"style":"windows","height":34,"fontSize":args.font_size,"fontFamily":args.font_family,"textAlign":"center","buttonSize":18,"edgePadding":10,"buttonPadding":9,"background":args.background,"foreground":args.foreground,"buttonForeground":"#ffffff","closeColour":"#ff605c","minimizeColour":null,"maximizeColour":null,"exclusions":[]});
+    let mut options = json!({"enabled":false,"style":"windows","height":34,"fontSize":args.font_size,"fontFamily":args.font_family,"textAlign":"center","buttonSize":18,"edgePadding":10,"buttonPadding":9,"background":args.background,"foreground":args.foreground,"buttonForeground":null,"closeColour":"#ff605c","minimizeColour":null,"maximizeColour":null,"exclusions":[]});
     for (key, value) in theme {
         if options.get(key).is_none() {
             return Err(format!("Unknown title-bar theme key: {key}"));
@@ -219,6 +219,13 @@ pub fn theme_policy(document: &Value, args: &Args) -> Result<Value> {
         return Err("Theme fontFamily must be a plain font name".into());
     }
     let mac = options["style"] == "mac";
+    if options["buttonForeground"].is_null() {
+        options["buttonForeground"] = if mac {
+            json!("#302820")
+        } else {
+            json!("#ffffff")
+        };
+    }
     for (key, fallback) in [
         ("minimizeColour", if mac { "#ffbd44" } else { "#646d7e" }),
         ("maximizeColour", if mac { "#00ca4e" } else { "#646d7e" }),
@@ -281,7 +288,7 @@ pub fn render(paths: &Paths, library: &Path, o: &Value) -> Result<String> {
         lua(&library.to_string_lossy())
     );
     s += &format!(
-        "  enabled = true, bar_height = {}, bar_text_size = {},\n  bar_title_enabled = true, bar_text_font = {}, bar_text_align = {},\n  bar_color = {}, ['col.text'] = {},\n  bar_buttons_alignment = {},\n  bar_padding = {}, bar_button_padding = {}, bar_part_of_window = true,\n  icon_on_hover = false,\n  on_double_click = {},\n}} }} }})\n",
+        "  enabled = true, bar_height = {}, bar_text_size = {},\n  bar_title_enabled = true, bar_text_font = {}, bar_text_align = {},\n  bar_color = {}, ['col.text'] = {},\n  bar_buttons_alignment = {},\n  bar_padding = {}, bar_button_padding = {}, bar_part_of_window = true,\n  icon_on_hover = {},\n  on_double_click = {},\n}} }} }})\n",
         o["height"],
         o["fontSize"],
         lua(o["fontFamily"].as_str().ok_or("Missing font")?),
@@ -295,21 +302,18 @@ pub fn render(paths: &Paths, library: &Path, o: &Value) -> Result<String> {
         lua(if o["style"] == "mac" { "left" } else { "right" }),
         o["edgePadding"],
         o["buttonPadding"],
+        o["style"] == "mac",
         lua(&action("maximize"))
     );
     let mut buttons = vec![
-        ("close", "closeColour", "×"),
-        ("minimize", "minimizeColour", "−"),
-        (
-            "maximize",
-            "maximizeColour",
-            if o["style"] == "mac" { "+" } else { "□" },
-        ),
+        ("close", "closeColour"),
+        ("minimize", "minimizeColour"),
+        ("maximize", "maximizeColour"),
     ];
     if o["style"] == "windows" {
         buttons.swap(1, 2);
     }
-    for (name, key, icon) in buttons {
+    for (name, key) in buttons {
         s += &format!(
             "hl.plugin.hyprbars.add_button({{ bg_color = {}, fg_color = {}, size = {}, icon = {}, action = {} }})\n",
             lua(&rgb(o[key].as_str().ok_or("Missing button colour")?)?),
@@ -317,7 +321,10 @@ pub fn render(paths: &Paths, library: &Path, o: &Value) -> Result<String> {
                 .as_str()
                 .ok_or("Missing foreground")?)?),
             o["buttonSize"],
-            lua(icon),
+            lua(&format!(
+                "familiar-{}-{name}",
+                o["style"].as_str().ok_or("Missing style")?
+            )),
             lua(&action(name))
         );
     }

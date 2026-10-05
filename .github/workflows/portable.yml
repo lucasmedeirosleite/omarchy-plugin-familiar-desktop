@@ -29,7 +29,11 @@ jobs:
           name: familiar-format-diagnostic
           path: /tmp/familiar-format.patch
       - name: Install Lua for keyboard configuration tests
-        run: sudo apt-get update && sudo apt-get install -y lua5.4
+        run: sudo apt-get update && sudo apt-get install -y lua5.4 libcairo2-dev
+      - name: Test vector window-control rasterization
+        run: |
+          c++ -std=c++20 tests/test_control_icons.cpp $(pkg-config --cflags --libs cairo) -o /tmp/familiar-control-icons
+          /tmp/familiar-control-icons
       - run: tests/run
       - run: cargo fmt --manifest-path backend/Cargo.toml -- --check
       - run: cargo clippy --manifest-path backend/Cargo.toml --all-targets --locked -- -D warnings

@@ -13,10 +13,12 @@ TestCase {
         compare(withApps, ["omarchy.apps", "silvaio.gamemode"]);
 
         var replaced = DockWidgets.addWidgetToDockList(withApps, "lgse.sandman");
-        compare(replaced, ["omarchy.apps", "lgse.sandman"]);
+        compare(replaced, ["omarchy.apps", "silvaio.gamemode", "lgse.sandman"]);
 
         var removed = DockWidgets.removeWidgetFromDockList(replaced, "lgse.sandman");
-        compare(removed, ["omarchy.apps"]);
+        compare(removed, ["omarchy.apps", "silvaio.gamemode"]);
+        compare(DockWidgets.normalizeDockWidgets(replaced), replaced);
+        compare(DockWidgets.addWidgetToDockList(replaced, "silvaio.gamemode"), replaced);
     }
 
     function test_getDockWidgetLayout() {

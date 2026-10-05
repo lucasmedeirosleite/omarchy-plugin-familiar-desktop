@@ -450,8 +450,8 @@ Item {
         style: root.titlebarStyle
         exclusions: root.titlebarExclusions
         size: root.titlebarSize
-        background: Color.background
-        foreground: Color.text
+        background: Color.popups.background
+        foreground: Color.popups.text
         fontFamily: Style.font.family
         fontSize: Math.max(8, Math.min(32, Style.font.subtitle))
     }
@@ -3029,7 +3029,7 @@ Item {
                                 font.family: Style.font.family
                                 font.pixelSize: 12
                                 font.weight: Font.Medium
-                                color: leftWidgetSlotMouse.containsMouse ? Color.accent : Color.composed("popups.text", "popups.text-alpha", Color.text, 0.95)
+                                color: leftWidgetSlotMouse.containsMouse ? Color.accent : Color.bar.text
                                 renderType: Text.CurveRendering
                                 font.hintingPreference: Font.PreferNoHinting
                                 Behavior on color { ColorAnimation { duration: 120 } }
@@ -3052,7 +3052,7 @@ Item {
                                         font.family: Style.font.family
                                         font.pixelSize: modelData.length > 3 ? 9 : 10
                                         font.weight: Font.Medium
-                                        color: leftWidgetSlotMouse.containsMouse ? Color.accent : Color.composed("popups.text", "popups.text-alpha", Color.text, 0.95)
+                                        color: leftWidgetSlotMouse.containsMouse ? Color.accent : Color.bar.text
                                         renderType: Text.CurveRendering
                                         font.hintingPreference: Font.PreferNoHinting
                                     }
@@ -3078,7 +3078,7 @@ Item {
                                 }
                                 fontFamily: (leftWidgetLoader.item && leftWidgetLoader.item.fontFamily) ? leftWidgetLoader.item.fontFamily : ((leftWidgetLoader.item && leftWidgetLoader.item.font && leftWidgetLoader.item.font.family) ? leftWidgetLoader.item.font.family : Style.font.family)
                                 fontSize: 22
-                                color: leftWidgetSlotMouse.containsMouse ? Color.accent : Color.composed("popups.text", "popups.text-alpha", Color.text, 0.95)
+                                color: leftWidgetSlotMouse.containsMouse ? Color.accent : Color.bar.text
                                 Behavior on color { ColorAnimation { duration: 120 } }
                             }
 
@@ -3154,7 +3154,7 @@ Item {
                         width: root.isVertical ? (root.slotSize - 18) : 1.5
                         height: root.isVertical ? 1.5 : (root.slotSize - 18)
                         radius: 0.75
-                        color: Color.composed("popups.border", "popups.border-alpha", Color.border, 0.45)
+                        color: Util.alpha(Color.bar.text, 0.25)
                     }
                 }
 
@@ -3303,7 +3303,7 @@ Item {
                         width: root.isVertical ? (root.slotSize - 18) : 1.5
                         height: root.isVertical ? 1.5 : (root.slotSize - 18)
                         radius: 0.75
-                        color: Color.composed("popups.border", "popups.border-alpha", Color.border, 0.45)
+                        color: Util.alpha(Color.bar.text, 0.25)
                     }
                 }
 
@@ -3342,7 +3342,7 @@ Item {
                                 font.family: Style.font.family
                                 font.pixelSize: 12
                                 font.weight: Font.Medium
-                                color: rightWidgetSlotMouse.containsMouse ? Color.accent : Color.composed("popups.text", "popups.text-alpha", Color.text, 0.95)
+                                color: rightWidgetSlotMouse.containsMouse ? Color.accent : Color.bar.text
                                 renderType: Text.CurveRendering
                                 font.hintingPreference: Font.PreferNoHinting
                                 Behavior on color { ColorAnimation { duration: 120 } }
@@ -3365,7 +3365,7 @@ Item {
                                         font.family: Style.font.family
                                         font.pixelSize: modelData.length > 3 ? 9 : 10
                                         font.weight: Font.Medium
-                                        color: rightWidgetSlotMouse.containsMouse ? Color.accent : Color.composed("popups.text", "popups.text-alpha", Color.text, 0.95)
+                                        color: rightWidgetSlotMouse.containsMouse ? Color.accent : Color.bar.text
                                         renderType: Text.CurveRendering
                                         font.hintingPreference: Font.PreferNoHinting
                                     }
@@ -3391,7 +3391,7 @@ Item {
                                 }
                                 fontFamily: (rightWidgetLoader.item && rightWidgetLoader.item.fontFamily) ? rightWidgetLoader.item.fontFamily : ((rightWidgetLoader.item && rightWidgetLoader.item.font && rightWidgetLoader.item.font.family) ? rightWidgetLoader.item.font.family : Style.font.family)
                                 fontSize: 22
-                                color: rightWidgetSlotMouse.containsMouse ? Color.accent : Color.composed("popups.text", "popups.text-alpha", Color.text, 0.95)
+                                color: rightWidgetSlotMouse.containsMouse ? Color.accent : Color.bar.text
                                 Behavior on color { ColorAnimation { duration: 120 } }
                             }
 

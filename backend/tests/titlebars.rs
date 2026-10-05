@@ -420,7 +420,8 @@ fn render_quotes_paths_classes_and_button_actions() {
     assert!(!text.contains("python"));
     // The pinned Hyprbars revision registers icon_on_hover, not buttons_on_hover.
     assert!(!text.contains("buttons_on_hover"));
-    assert!(text.contains("icon_on_hover = false"));
+    assert!(text.contains("icon_on_hover = "));
+    assert!(text.contains("familiar-"));
 }
 #[test]
 fn styles_change_order_and_alignment() {
@@ -437,6 +438,10 @@ fn styles_change_order_and_alignment() {
         } else {
             "bar_buttons_alignment = \"right\""
         }));
+        assert!(text.contains(&format!("familiar-{style}-close")));
+        assert!(text.contains(&format!("familiar-{style}-minimize")));
+        assert!(text.contains(&format!("familiar-{style}-maximize")));
+        assert!(text.contains(&format!("icon_on_hover = {}", style == "mac")));
         let buttons = &text[text.find("add_button").unwrap()..];
         let min = buttons.find("action minimize").unwrap();
         let max = buttons.find("action maximize").unwrap();

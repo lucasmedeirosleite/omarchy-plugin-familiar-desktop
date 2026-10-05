@@ -39,6 +39,7 @@ printf 'Testing %s (%s). Previous checkout: %s\n' "$candidate_version" "$candida
 # Recover any windows hidden by an earlier candidate before disabling its service.
 if [[ -x "$plugin_dir/bin/familiar-desktop" ]] && [[ "$("$plugin_dir/bin/familiar-desktop" --version)" == *0.1.0* ]]; then
   "$plugin_dir/bin/familiar-desktop" desktop restore
+  "$plugin_dir/bin/familiar-desktop" titlebars disable
 fi
 omarchy plugin disable "$plugin_id"
 git -C "$plugin_dir" checkout --detach "$candidate_sha"
@@ -46,9 +47,12 @@ git -C "$plugin_dir" checkout --detach "$candidate_sha"
 mkdir -p "$plugin_dir/bin/hyprbars/$abi"
 install -m 755 "$bundle_dir/familiar-desktop-linux-x86_64" "$plugin_dir/bin/.familiar-desktop.candidate"
 mv "$plugin_dir/bin/.familiar-desktop.candidate" "$plugin_dir/bin/familiar-desktop"
-install -m 644 "$bundle_dir/hyprbars-linux-x86_64-$abi.so" "$plugin_dir/bin/hyprbars/$abi/hyprbars.so"
+install -m 644 "$bundle_dir/hyprbars-linux-x86_64-$abi.so" "$plugin_dir/bin/hyprbars/$abi/.hyprbars.candidate.so"
+mv "$plugin_dir/bin/hyprbars/$abi/.hyprbars.candidate.so" "$plugin_dir/bin/hyprbars/$abi/hyprbars.so"
 "$plugin_dir/bin/familiar-desktop" titlebars setup --library "$plugin_dir/bin/hyprbars/$abi/hyprbars.so" --enable --style "$style"
 omarchy plugin enable "$plugin_id"
 omarchy-shell "$plugin_id" refresh
 omarchy-shell "$plugin_id" refreshTitlebars
 printf '\nFamiliar %s installed for testing. Open the computer icon in the bar.\nRead XPS-TEST.md in this bundle. Previous source: %s\n' "$candidate_version" "$previous_sha"
+
+printf '\nRestart the shell to load updated UI components: omarchy restart shell\n'
