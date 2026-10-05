@@ -1,51 +1,29 @@
-# Familiar v0.1.0 release preparation
+# Familiar v0.1.0 release record
 
-Prepared on Monday 5 October 2026 (UK); formal publication is deferred. This document prepares the release; it does not schedule publication or claim the release exists.
+## Scope and owner acceptance
 
-## Frozen scope
+The release includes the dock, named windows, General/Windows/Mac layouts, Automatic/Bottom/Left/Right placement, optional window controls, centred settings, window arrangement and recovery, Show Desktop/Restore, sizes, Quit/confirmed Force Quit, active shortcuts, file shortcuts and Caps Lock/Compose preference. The app collection stays planned for v0.2.0.
 
-Core desktop only: dock and named windows; three layout presets; Automatic/Bottom/Left/Right dock placement; optional title bars; centred settings; window arrangement and recovery; Show Desktop/Restore; dock/title-bar sizes; Quit/confirmed Force Quit; active shortcuts; optional file shortcuts; explicit Caps Lock/Compose preference.
+On 5 October 2026 the maintainer approved rc.5 after XPS testing: “Okay this looks solid to me now. We should mark v0.1.0 and do the submission!” The tested source is `377f8823c1b8a013131d75d614339bf569c9a68e`. The final preparation changes release documentation and adds an explicit annotated-tag workflow; runtime and installer source remain identical to rc.5.
 
-Getting Started contains System settings and Troubleshooting. The v0.2.0 app collection will expose Open for installed apps and Install only after a supported package is verified. No Paint, Notepad, Task Manager, OmaStore or Postcard installation is part of v0.1.0. These apps are not release dependencies.
+## Automated evidence
 
-## Candidate and version
+Both main workflows passed for rc.5: Portable checks run 37359006140 and Release binaries run 37359006230. Coverage includes Rust tests and Clippy, Lua 5.4/5.5 Caps Lock regressions, QML tests/parsing, 48 dock placement combinations, settings persistence, 12 original installer scenarios plus compatibility/asset failures, 14 update lifecycle scenarios, 11 candidate installer scenarios, 7 uninstall scenarios and final/RC tag validation. Clean-tree release preflight also passed with advisory capability findings requiring review; this is not a security audit.
 
-The manifest, Cargo package/lockfile and all three release installers declare 0.1.0. The release executable test derives its expected version from the manifest to avoid another stale rc assertion. Historical rc.1/rc.2 notes remain historical.
+Final documentation/tag preparation receives its own CI runs. The manually invoked **Tag verified release** workflow requires the current main SHA and successful Portable checks and Release binaries runs before making an annotated version tag. It refuses to replace an existing tag. Final publication runs Release binaries again and uploads immutable versioned assets.
 
-Until the tag/assets exist, use the `familiar-desktop-release` artifact from the successful **Release binaries** run for this exact candidate. Extract it and run:
+## Artifact and source identity
 
-```bash
-bash install-candidate.sh windows
-```
+The published release and tag identify the final full SHA. `RELEASE-MANIFEST.json` and `SOURCE-MANIFEST.json` bind the executable, source archive, Hyprbars library, documents and notices to that SHA. `SHA256SUMS` covers the assets. The rc.5 ZIP remains immutable and available separately, with SHA-256 `86831e8b43183cf2fc86b9b29235de44f8b10bb64cb9459b4b72304128978916`.
 
-Use `mac` for left-side controls. This installer embeds the full source SHA and version. Do not run the unexpanded template in the source tree or the future v0.1.0 download installer before assets are published. The README links the immutable published rc.4 ZIP. Its source is `28e192a2f6f733b37b49f7e524290fd4234004c7`; its ZIP SHA-256 is `f7d5fd7593f42bd68688739376860c513cc4198036bfd7b3b1bccc8e4fa7d9f9`. Main includes later installer and workflow preparation, so rc.4 testing alone does not validate those changes.
+## Compatibility and remaining coverage
 
-## Before publication
+Supported prebuilt target: Linux x86_64, Omarchy Quattro, Hyprland 0.56.2 commit `efb50993780079460b0cbed1363e2166a2de1d9f`, ABI `efb50993780079460b0cbed1363e2166a2de1d9f_aq_0.15_hu_0.14_hg_0.5_hc_0.1_hlg_0.6`.
 
-- [ ] Merge the preparation PR after Portable checks and Release binaries pass. Record the resulting main commit and its own successful CI runs.
-- [ ] Inspect the exact candidate bundle: static executable version 0.1.0, supported Hyprbars ABI, complete SHA256SUMS, release/source manifests, SPDX document, notices, installer and XPS guide.
-- [ ] Run `omarchy plugin validate` on the candidate on XPS and record its output. The portable skill preflight was run during the rc.4 review; it does not substitute for the installed Omarchy validator or live checks.
-- [ ] Complete docs/XPS-TEST.md on that exact source. Record `omarchy-version`, `hyprctl version`, monitor/scale, plugin SHA and each result.
-- [ ] Check fresh install, upgrade from v0.0.6, repeat install, settings/pin retention, local-change refusal, disable/re-enable, Caps reset, title-bar removal and rollback. Preserve personal files; use disposable test profiles where possible.
-- [ ] Verify actual window actions, Show Desktop/Restore, focus/dismissal, keyboard behavior after reload/login, themes/scaling and available monitor coverage. State unavailable hardware coverage explicitly.
-- [ ] Complete docs/ROLLBACK.md: separate settings, exact fresh-install cleanup, later-edit preservation, refusal paths, live keyboard/title-bar reset and the installed uninstall command.
-- [ ] Finish the compatibility paragraph in docs/v0.1.0.md using those results. Replace the rendered settings preview with a real screenshot when available.
-- [ ] Review the existing release download trust boundary before public promotion: checksums detect corruption but are fetched beside the release; immutable provenance binding and workflow dependency pinning are not established by these checks. Do not describe this as a security audit.
-- [ ] Freeze source, create an annotated v0.1.0 tag at that exact commit, and publish the release using the approved notes. Never move the tag. Observe Release binaries through asset upload and verify the downloaded published assets.
-- [ ] Switch the README's primary install/update link from rc.4 to v0.1.0 only once those assets are present. Keep the rollback instructions.
+The owner supplied overall desktop acceptance. An exact installed Omarchy revision, per-step acceptance log, exhaustive app/monitor/scaling results and a fresh-profile lifecycle record were not supplied. The formal download installer has fixture coverage; the owner's candidate installation used the candidate bundle route. Keep these limits explicit when responding to feedback or marketplace review. A rendered preview is labelled as such in the README.
 
-The live checks and final provenance/publication gates are outstanding. A green portable build is a testable candidate, not a release sign-off. Do not cut the tag or publish just because the planned date has arrived.
+## Installation and removal
 
-## Evidence record
+The versioned installer uses public GitHub downloads, SHA-256 and executable version checks. It may install missing download tools with pacman after a privilege prompt. It never builds on the user's machine. Unsupported ABIs and local-file conflicts stop setup. See README for installation and `uninstall.sh` for owned-configuration cleanup; settings, pins and backups are retained.
 
-Base at preparation start: `90db20ac1919486da3fc7e55387ecfc30188bb6d` (rc.2). Both main workflows passed. This branch changes core scope presentation, version alignment, release documentation and release-version assertions. Fresh CI results belong to this PR and must not be replaced with the rc.2 results.
-
-The prepared bundle includes this checklist and the release-note draft, with their hashes in the release manifest and SHA256SUMS. XPS acceptance uses the guide inside that same bundle.
-
-## Final preparation changes
-
-The main preparation consolidates the settings, dock placement, cleanup and both Caps Lock fixes. The release installer now checks compatibility before registration, refuses unmanaged/dirty/untracked/unexpected ignored files, restores v0.1.0 windows, disables owned controls and the plugin before checkout, and repeats the clean-tree check before installing. Regression fixtures cover updates from v0.0.6 and v0.1.0 plus refusal and recovery failures.
-
-Release CI accepts exact final tags and numbered `vX.Y.Z-rc.N` tags marked as prereleases. It checks out the event tag explicitly. Prereleases build and validate artifacts; only a final release automatically uploads the normal installer assets. Existing published tags and ZIPs remain unchanged. The old rc.2–rc.4 release-event runs failed the old exact-tag check; their ZIPs came from successful PR builds. New workflow code cannot retroactively change those historical runs.
-
-The maintainer reported rc.4 looked good on the desktop. This is useful feedback, not a completed per-step acceptance record. The formal tag, release and source-bound live checks above remain pending. Bug and feature-request forms are available for incoming feedback.
+Checksums downloaded beside assets detect corruption; they are not independent publisher attestations. Existing build workflow dependencies are not all pinned to immutable identities. Marketplace approval remains a separate exact-commit review.
