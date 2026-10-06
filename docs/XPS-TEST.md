@@ -4,7 +4,9 @@ This is the v0.1.1 desktop candidate. First complete the new preference, pointer
 
 ## Install
 
-Download and extract the `familiar-desktop-release` ZIP from the candidate PR's successful **Release binaries** workflow. From that extracted folder:
+Use this installation path only when the candidate PR's successful **Release binaries** workflow provides a source-pin-verified `familiar-desktop-release` ZIP. A `familiar-desktop-packaging-validation` artifact is validation-only: its unreleased binaries differ from committed pins, it contains no installers, and it is not suitable for this acceptance installation. Green CI alone does not approve a candidate for installation or publication.
+
+Download and extract the `familiar-desktop-release` ZIP. From that extracted folder:
 
 ```bash
 bash install-candidate.sh windows
