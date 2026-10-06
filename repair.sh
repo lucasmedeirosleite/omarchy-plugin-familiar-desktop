@@ -20,6 +20,18 @@ trap 'echo "Repair stopped; complete repair before enabling Familiar." >&2' ERR
 bash "$root/install-backend.sh"
 library="$(bash "$root/install-titlebars.sh")"
 "$root/bin/familiar-desktop" titlebars setup --library "$library" --enable --style "$style"
+# Enabling rewrites plugin files, so the shell briefly unloads the plugin while it
+# reloads. Retry until its IPC target is back; fail if it never returns.
+shell_call() {
+  local attempt output
+  for attempt in {1..25}; do
+    if output="$(omarchy-shell "$plugin_id" "$@" 2>&1)"; then [[ -z "$output" ]] || printf '%s\n' "$output"; return 0; fi
+    sleep 0.2
+  done
+  printf '%s\n' "$output" >&2
+  echo "Familiar did not respond to '$*' after enabling; the shell may still be reloading." >&2
+  return 1
+}
 omarchy plugin enable "$plugin_id"
-omarchy-shell "$plugin_id" refresh
-omarchy-shell "$plugin_id" refreshTitlebars
+shell_call refresh
+shell_call refreshTitlebars
