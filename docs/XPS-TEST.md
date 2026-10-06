@@ -63,6 +63,14 @@ Settings, pins, badges and recovery journal are retained. Companion apps and unr
 - Mac controls: circular traffic lights, crisp dark marks on hover, expand arrows instead of a plus. Windows controls: rounded-square buttons with close/minimise/maximise paths. Verify clicks at 100%, 150% and 200% scale, including moving between differently scaled monitors.
 - Apps that draw their own header can still show duplicate controls. The existing window-class exclusion remains available; automatic detection is not part of this fix.
 
+## Minimise/restore regression (#34)
+
+- On an otherwise empty workspace with no special workspace open, open one disposable window and minimise it from the title bar. It must disappear without a workspace round-trip. `hyprctl -j monitors` must still show the original regular workspace and must not show `special:minimized` as active.
+- Restore it from the dock, then minimise it from the dock's app menu. It must disappear again; restore must bring it back and focus it.
+- Open two disposable apps on the same workspace and minimise them in sequence. Minimising the second must not reveal the first. Restore each separately and confirm the other stays minimised until selected. Repeat with two windows of the same app.
+
+Inspect actual window visibility as well as workspace state. Hyprland's client `visible` field does not include workspace visibility, so it is not sufficient proof that a minimised window is on screen.
+
 ## Clean rollback acceptance
 
 Complete [ROLLBACK.md](ROLLBACK.md) before release: separate Caps Lock file, byte-preserving fresh title-bar install/remove, preservation of subsequent personal edits, edited-hook refusal, failed reload stopping deletion, and actual Hyprbars unload. Generic plugin deletion is not this cleanup path.
