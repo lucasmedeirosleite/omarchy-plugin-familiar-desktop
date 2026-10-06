@@ -1,11 +1,11 @@
 # v0.1.1 preparation and release gate
 
-Base: f61093271346f57447b39b22ac9fd4d01fb061d9. Do not publish or tag until owner acceptance and final CI.
+RC.1 baseline: 2e28cdc43a59d4d7427cd7a59d40613ff1a9571f. The owner authorised rc.2 preparation and testing. Final v0.1.1 still requires live acceptance and final CI.
 
 ## Required XPS checks
 
 - Upgrade from v0.1.0: preserve dock pins, layout, theme, Caps Lock and titlebar choices.
-- Windows settings initially use existing configuration. Enable Floating explicitly, then press Super+Enter repeatedly. Existing tiles must retain size; new terminals must float. Repeat with another app and a dialog. No Hyprland config errors.
+- Windows settings initially use existing configuration. Enable Floating explicitly, then press Super+Enter repeatedly. Eligible existing windows must become floating; newly opened terminals must float without resizing them. Switch to Tiling and verify eligible existing windows rejoin the current Hyprland layout. Repeat with another app and a dialog. No Hyprland config errors.
 - Remove the preference, open another terminal and confirm normal tiling. Existing floaters stay floating until explicitly returned to tiling. Uninstall removes only Familiar's owned include and separate generated file; retain unrelated edits. Edited owned files must stop cleanup.
 - Minimise via titlebar and app menu; confirm app remains in dock and restores on current workspace. Test multiple named windows, other workspaces, two monitors, negative monitor coordinates and mixed scaling.
 - Activate each named window from the context menu and by dock click. Verify exact window focus and pointer centre after animation, without focus bouncing to the dock. Minimising must not unexpectedly warp to another window. Close a window while its menu is open.
