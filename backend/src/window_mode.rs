@@ -64,11 +64,7 @@ fn generated_content(paths: &Paths) -> Result<Option<String>> {
         Err(e) => Err(e.to_string()),
         Ok(_) => {
             let value = text(&paths.generated)?;
-            if !["floating"].iter().any(|mode| {
-                [hook(mode, &paths.manifest)]
-                    .iter()
-                    .any(|candidate| candidate.as_ref().ok() == Some(&value))
-            }) {
+            if value != hook("floating", &paths.manifest)? {
                 return Err("Familiar's separate window config was edited; no file changed".into());
             }
             Ok(Some(value))
@@ -129,17 +125,15 @@ pub fn split(text: &str, manifest: &Path) -> Result<(String, String)> {
         return Ok((text.into(), "reset".into()));
     }
     if starts == 1 && ends == 1 {
-        for mode in ["floating"] {
-            for block in [hook(mode, manifest)?] {
-                if let Some(start) = text.find(&block) {
-                    return Ok((
-                        format!("{}{}", &text[..start], &text[start + block.len()..]),
-                        mode.into(),
-                    ));
-                }
-            }
+        let block = hook("floating", manifest)?;
+        if let Some(start) = text.find(&block) {
+            return Ok((
+                format!("{}{}", &text[..start], &text[start + block.len()..]),
+                "floating".into(),
+            ));
         }
     }
+
     Err("Familiar Window mode block was edited, damaged or belongs to another installation; no file changed".into())
 }
 
