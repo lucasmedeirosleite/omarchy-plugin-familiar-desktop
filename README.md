@@ -12,27 +12,25 @@ Familiar Desktop adds a mouse-friendly app dock to Omarchy Quattro. Launch or re
 
 *Rendered QML preview of the settings modal, using illustrative colours. A live Omarchy screenshot will replace this preview after on-device testing.*
 
-## Install v0.1.1
+## Install
 
-Familiar v0.1.1 adds mouse resizing, Floating/Tiling controls, optional Command editing shortcuts and trackpad gestures, plus installer reliability and source-pinned binary verification.
-
-Restore minimised windows, then run this in an Omarchy Quattro terminal:
+On Omarchy Quattro, run:
 
 ```bash
-(
-  set -euo pipefail
-  familiar_setup="$(mktemp -d)"
-  cd "$familiar_setup"
-  curl -fL --retry 3 https://github.com/tcballard/omarchy-plugin-familiar-desktop/releases/download/v0.1.1/install.sh -o install.sh
-  echo "2a68b44fa80daff10af116edb43a8b43cfbdc08a8ef8520c39d2b51239dfa083  install.sh" | sha256sum --check --strict
-  bash install.sh windows
-  omarchy restart shell
-)
+omarchy plugin add https://github.com/tcballard/omarchy-plugin-familiar-desktop --enable
 ```
 
-Use `mac` for left-side controls. No GitHub login or compiler is required.
+Familiar opens its setup screen automatically. Choose Windows or Mac controls and click **Set up Familiar**. It downloads and verifies the backend and window controls, then activates your desktop. Progress, errors and retry stay inside Familiar; no second terminal command is needed. Downloads start only after you click setup.
 
-The installer verifies backend and Hyprbars bytes against `release-binaries.sha256` in its exact Git snapshot before execution or loading. See [source identity and limits](docs/INSTALLER-SOURCE-PIN.md).
+You can close setup and reopen it from Familiar's computer icon in the bar. Existing complete installations skip the setup screen. **Windows → Set up or repair window controls** opens the same flow later. Personal settings and pinned apps are retained; choosing a starting layout applies that layout's dock defaults.
+
+This first-run flow is the next-release candidate on main. The published [v0.1.1 release](https://github.com/tcballard/omarchy-plugin-familiar-desktop/releases/tag/v0.1.1) retains its verified standalone installer. The new native-install path requires live XPS acceptance before the next release.
+
+Setup requires the standard Omarchy tools (including curl, jq and coreutils), Linux x86_64 and the supported Hyprland ABI below. Missing tools or unsupported desktops are reported inside setup; it never opens a terminal or silently installs system packages. Both downloaded binaries must match `release-binaries.sha256` in the installed source. See [source identity and limits](docs/INSTALLER-SOURCE-PIN.md).
+
+### Standalone release installer
+
+The version-pinned, checksum-verified command remains in the [v0.1.1 release notes](https://github.com/tcballard/omarchy-plugin-familiar-desktop/releases/tag/v0.1.1).
 
 The installer refuses local source changes, untracked files and unexpected ignored files. It checks compatibility, restores windows on v0.1.0 updates, unloads controls and disables Familiar before checkout, then verifies binaries before setup and enablement. A failed update stops for repair. Missing download tools may prompt for a package-manager password.
 
@@ -42,7 +40,7 @@ Window controls also download as a checksum-verified prebuilt Hyprbars library. 
 
 For a fresh installation, the installer fetches the pinned release commit into a temporary local repository and verifies its identity before passing that checkout to `omarchy plugin add`. It then verifies the registered checkout and completes setup before enabling Familiar. You do not need to run registration separately.
 
-The shared `bin/familiar-desktop` Rust binary handles window actions, title-bar setup, theme parsing, app/icon scans and badge writes. Downloads happen in your terminal during explicit setup; privilege prompts are only needed for missing download tools. The hosted shell never compiles or downloads code.
+The shared `bin/familiar-desktop` Rust binary handles window actions, title-bar setup, theme parsing, app/icon scans and badge writes. Downloads happen during explicit setup, either in Familiar or through the standalone terminal installer. Familiar never compiles code on your desktop. Its setup screen launches the bundled download scripts only after your explicit setup action.
 
 The plugin adds a **Familiar Desktop** control to the bar. Open it to choose a starting layout and adjust dock settings. If you already use another dock, disable it before enabling this one so the two do not occupy the same edge.
 

@@ -2,6 +2,7 @@ import QtQuick
 Item {
     property var command: []
     property bool running: false
+    property var stderr
     property var stdout
     property int starts: 0
     onRunningChanged: if (running) starts += 1

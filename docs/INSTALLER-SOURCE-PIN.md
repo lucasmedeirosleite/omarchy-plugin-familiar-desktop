@@ -1,5 +1,13 @@
 # Installer source and binary identity
 
+## In-app setup candidate
+
+Native `omarchy plugin add` clones the repository default branch; it does not pin a release tag or install binaries. Familiar checks local binary digests before showing its dock and opens a first-run setup screen when setup is incomplete. The user explicitly starts downloads in that screen. The bundled `setup-in-app.sh` runs the same source-pinned download installers and never fetches a new source checkout, opens a terminal, or invokes a package manager.
+
+Setup is serialized by a filesystem lock. An incomplete marker persists across interruption; errors and bounded diagnostic output return to the screen. Setup does not disable/re-enable the plugin or restart the shell hosting it. Existing downloads are only executed after checking their committed digest. The current UI candidate intentionally reuses the reviewed v0.1.1 backend and Hyprbars assets; it does not change their pins.
+
+This is a change to the reviewed network/process execution path and requires marketplace re-review as well as live native-install acceptance.
+
 ## v0.1.1 review candidate
 
 `release-binaries.sha256` records the expected backend executable and Hyprbars

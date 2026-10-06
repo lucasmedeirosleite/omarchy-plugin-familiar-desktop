@@ -4,6 +4,7 @@ import Quickshell.Io
 
 Item {
     id: root
+    property bool available: true
     property bool enabled: false
     property string style: "mac"
     property string mode: "theme"
@@ -34,7 +35,7 @@ Item {
     }
     function refresh() { schedule() }
     function reconcile() {
-        if (disposed || adapter.running) return
+        if (disposed || !available || adapter.running) return
         requestedRevision = revision
         adapter.command = [helper, "titlebars", enabled ? "apply" : "disable", "--owner", ownerToken,
                            "--style", style, "--background", hexColour(background),
@@ -42,6 +43,7 @@ Item {
                            "--mode", mode, "--size", size, "--font-family", fontFamily, "--font-size", String(fontSize)]
         adapter.running = true
     }
+    onAvailableChanged: schedule()
     onEnabledChanged: schedule()
     onStyleChanged: schedule()
     onModeChanged: schedule()
@@ -71,7 +73,7 @@ Item {
         disposed = true
         // A session token prevents an old instance's teardown undoing a newer
         // instance after hot reload. The adapter serializes writes with flock.
-        Quickshell.execDetached([helper, "titlebars", "disable", "--owner", ownerToken, "--if-owner"])
+        if (available) Quickshell.execDetached([helper, "titlebars", "disable", "--owner", ownerToken, "--if-owner"])
     }
     Timer {
         id: reconcileTimer
