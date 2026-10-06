@@ -62,7 +62,7 @@ Rectangle {
             enabled: !root.controller.busy && root.controller.canStart
             Layout.fillWidth: true
             Repeater {
-                model: [{key: "windows", label: "Windows\nControls on the right"}, {key: "mac", label: "Mac\nControls on the left"}]
+                model: [{key: "windows", label: "Windows\nRight-side controls"}, {key: "mac", label: "Mac\nLeft-side controls"}]
                 delegate: ActionButton {
                     required property var modelData
                     Layout.fillWidth: true

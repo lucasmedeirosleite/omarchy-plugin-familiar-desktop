@@ -11,6 +11,7 @@ Item {
     property string details: ""
     property bool opened: false
     property string style: "windows"
+    property bool applyLayout: true
     property string operation: "status"
     property bool timedOut: false
     readonly property bool ready: state === "ready"
@@ -28,6 +29,7 @@ Item {
     function show() { opened = true }
     function repair(selectedStyle) {
         if (busy) { show(); return }
+        applyLayout = false
         style = selectedStyle === "mac" ? "mac" : "windows"
         state = "needed"
         message = "Set up or repair your window controls."
@@ -89,7 +91,7 @@ Item {
         }
         stderr: StdioCollector { id: errors; waitForEnd: true }
         onRunningChanged: if (running) watchdog.restart()
-        onExited: function(code, status) { root.complete(code, output.text + "\n" + errors.text) }
+        onExited: function(code, status) { root.complete(status === 0 ? code : 1, output.text + "\n" + errors.text) }
     }
     Timer {
         id: retryCheck

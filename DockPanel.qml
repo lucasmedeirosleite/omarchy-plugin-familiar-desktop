@@ -39,7 +39,7 @@ Item {
         canStart: !titlebars.busy
         onInstalled: function(style) {
             root.readSettings()
-            root.setProfile(style)
+            if (setupController.applyLayout) root.setProfile(style)
             root.refresh()
             titlebars.refresh()
         }

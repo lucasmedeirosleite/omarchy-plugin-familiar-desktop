@@ -26,6 +26,7 @@ TestCase {
         wait(50)
         verify(item.implicitHeight > 200)
         verify(item.implicitHeight < 650)
+        verify(grabImage(item).save("/tmp/familiar-setup-preview.png"))
         item.width = 350
         wait(50)
         verify(item.implicitHeight < 760)
