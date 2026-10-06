@@ -29,7 +29,7 @@ try {
   write(path.join(tools,'omarchy'),`#!/bin/bash\necho "omarchy $*" >> "$LOG"\nif [[ "$1 $2" == 'plugin add' ]]; then\n test "$("$REAL_GIT" -C "$3" rev-parse HEAD)" = "$PIN" || exit 97\n mkdir -p "$(dirname "$PLUGIN")"\n "$REAL_GIT" clone -- "$3" "$PLUGIN"\nfi\n`);
   write(path.join(tools,'git'),`#!/bin/bash\nif [[ "$*" == *'rev-parse --verify FETCH_HEAD^{commit}' && "$FAULT" == fetch ]]; then echo "$MOVED"; exit 0; fi\nif [[ "$*" == *'checkout --detach'* && "$FAULT" == checkout ]]; then exit 0; fi\nexec "$REAL_GIT" "$@"\n`);
   const script=path.join(home,'install.sh');
-  write(script,source.replace("repository='https://github.com/tcballard/omarchy-plugin-familiar-desktop.git'",`repository='${remote}'`).replace('bda1ec617966b11fb8470788c74019350b38838f',pin));
+  write(script,source.replace("repository='https://github.com/tcballard/omarchy-plugin-familiar-desktop.git'",`repository='${remote}'`).replace('@SOURCE_SHA@',pin));
   // For upgrade checkout fault, begin on the wrong commit so a no-op is detected.
   if(existing&&fault==='checkout')git(['checkout','--detach',moved],plugin);
   const r=spawnSync('bash',[script,'windows'],{encoding:'utf8',env:{...process.env,HOME:home,PATH:tools+':/usr/bin:/bin',LOG:log,PLUGIN:plugin,REAL_GIT:realGit,PIN:pin,MOVED:moved,FAULT:fault}});

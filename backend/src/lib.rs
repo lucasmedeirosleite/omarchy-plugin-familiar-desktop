@@ -5,3 +5,5 @@ pub mod titlebars;
 pub type Result<T> = std::result::Result<T, String>;
 pub mod caps_lock;
 pub mod desktop;
+
+pub mod window_mode;

@@ -209,3 +209,7 @@ before downgrading or removing Familiar. If the plugin is removed without reset,
 the block becomes inactive when Hyprland next reloads because the plugin manifest
 is absent. Edited/damaged blocks and symlinked main configs are refused rather than
 overwritten. See [the Caps Lock guide](docs/CAPS-LOCK.md) for recovery and testing.
+
+## v0.1.1 in preparation
+
+The next candidate adds opt-in floating windows, pointer centring on dock activation, and repair without fetching source. See [candidate notes](docs/v0.1.1.md), [test/release gates](docs/RELEASE-0.1.1.md) and the [teaser audit](docs/VIDEO-AUDIT-0.1.1.md). It is not published; the installation command above still installs stable v0.1.0. The repository `install.sh` is now a CI template; use the generated candidate bundle for testing.

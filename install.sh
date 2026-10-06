@@ -7,9 +7,10 @@ main() {
 plugin_id='io.github.tcballard.familiar-desktop'
 plugin_dir="$HOME/.config/omarchy/plugins/$plugin_id"
 repository='https://github.com/tcballard/omarchy-plugin-familiar-desktop.git'
-release='v0.1.0'
-# Reviewed, published v0.1.0 source. Never resolve executable source via a tag.
-release_sha='bda1ec617966b11fb8470788c74019350b38838f'
+release='v0.1.1'
+# Release CI inserts the exact built commit into the standalone release asset.
+# The repository template intentionally refuses to install without this pin.
+release_sha='@SOURCE_SHA@'
 [[ "$release_sha" =~ ^[0-9a-f]{40}$ ]] || { echo 'Invalid release source pin.' >&2; exit 1; }
 style="${1:-mac}"
 if [[ $# -gt 1 || ( "$style" != mac && "$style" != windows ) ]]; then
