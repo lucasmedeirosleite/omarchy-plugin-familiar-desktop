@@ -24,13 +24,14 @@ const library='fixture library';
 const sha=s=>createHash('sha256').update(s).digest('hex');
 write(path.join(root,'release-binaries.sha256'),`${sha(helper)}  familiar-desktop-linux-x86_64\n${sha(library)}  hyprbars-linux-x86_64-${abi}.so\n`);
 write(path.join(tmp,'helper'),helper); write(path.join(tmp,'library'),library);
-write(path.join(root,'install-backend.sh'),`#!/bin/bash\necho download-backend >> "$CALLS"\n[[ "$FAIL" != download ]] || exit 1\nmkdir -p "$ROOT/bin"\ncp "$FIXTURE/helper" "$ROOT/bin/familiar-desktop"\n[[ "$CORRUPT" != 1 ]] || echo corrupt >> "$ROOT/bin/familiar-desktop"\n`);
+write(path.join(root,'install-backend.sh'),`#!/bin/bash\necho download-backend >> "$CALLS"\n[[ "$STALL" != 1 ]] || sleep 30\n[[ "$FAIL" != download ]] || exit 1\nmkdir -p "$ROOT/bin"\ncp "$FIXTURE/helper" "$ROOT/bin/familiar-desktop"\n[[ "$CORRUPT" != 1 ]] || echo corrupt >> "$ROOT/bin/familiar-desktop"\n`);
 write(path.join(root,'install-titlebars.sh'),`#!/bin/bash\n[[ "$FAIL" != abi ]] || exit 1\n[[ "$1" != --check ]] || exit 0\necho download-titlebars >> "$CALLS"\nmkdir -p "$ROOT/bin/hyprbars/$ABI"\ncp "$FIXTURE/library" "$ROOT/bin/hyprbars/$ABI/hyprbars.so"\n`);
 write(path.join(mock,'git'),'#!/bin/bash\n[[ "$DIRTY" != 1 ]] || echo " M file"\n');
 for (const n of ['omarchy','omarchy-shell','sudo','pkexec','foot','kitty']) write(path.join(mock,n),'#!/bin/bash\necho forbidden >> "$CALLS"\nexit 99\n');
 const env={...process.env,HOME:home,XDG_STATE_HOME:path.join(home,'.local/state'),XDG_CONFIG_HOME:path.join(home,'.config'),PATH:mock+':'+process.env.PATH,ROOT:root,FIXTURE:tmp,ABI:abi,CALLS:log};
 write(path.join(mock,'hyprctl'),'#!/bin/bash\nexit 0\n');
 function run(mode, extra={}) { return spawnSync('bash',[path.join(root,'setup-in-app.sh'),mode,'mac'],{env:{...env,...extra},encoding:'utf8'}); }
+(async () => {
 try {
  assert.equal(run('status').status,3);
  let r=run('install'); assert.equal(r.status,0,r.stdout+r.stderr); assert.equal(run('status').status,0);
@@ -50,5 +51,21 @@ try {
  // Real flock exclusion prevents duplicate setup, including after shell reload.
  const lock=spawnSync('flock',[path.join(home,'.local/state/familiar-desktop/setup.lock'),'bash',path.join(root,'setup-in-app.sh'),'install'],{env,encoding:'utf8'});
  assert.equal(lock.status,4,lock.stdout+lock.stderr);
+ // TERM delivered through the same timeout supervisor used by QML must leave no active partial setup.
+ fs.writeFileSync(log,'');
+ const cancelled = await new Promise((resolve, reject) => {
+   const child = spawn('timeout',['--kill-after=2','10','bash',path.join(root,'setup-in-app.sh'),'install','mac'],{env:{...env,STALL:'1'},stdio:'ignore'});
+   const stop = setTimeout(() => child.kill('SIGTERM'), 200);
+   child.on('error', reject);
+   child.on('exit', code => { clearTimeout(stop); resolve(code); });
+ });
+ assert.notEqual(cancelled,0);
+ let stopped = run('status').status;
+ for(let i=0; stopped===4 && i<30; i++) { await new Promise(resolve=>setTimeout(resolve,100)); stopped=run('status').status; }
+ assert.equal(stopped,3);
+ assert.doesNotMatch(fs.readFileSync(log,'utf8'),/titlebars apply/);
+ assert.equal(run('install').status,0);
  console.log('In-app setup: fresh install, existing install, failure/retry, interrupted state, source refusal, corrupt bytes, and concurrency passed.');
 } finally { fs.rmSync(tmp,{recursive:true,force:true}); }
+
+})().catch(error => { console.error(error); process.exitCode = 1; });

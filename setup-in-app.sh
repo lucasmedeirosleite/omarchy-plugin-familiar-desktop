@@ -53,7 +53,7 @@ finish() {
     tail -c 2400 "$log"
     printf '\n'
     if verified "$helper" familiar-desktop-linux-x86_64 && [[ -x "$helper" ]]; then
-      timeout --kill-after=2 15 "$helper" titlebars disable >/dev/null 2>&1 || true
+      timeout --foreground --kill-after=2 15 "$helper" titlebars disable >/dev/null 2>&1 || true
     fi
   fi
   rm -f "$log"
@@ -64,23 +64,23 @@ trap 'exit 143' TERM
 # A persisted incomplete marker survives shell restart and prevents partial activation.
 printf 'pending\n' > "$state/setup-pending"
 echo 'Checking your desktop…'
-timeout --kill-after=5 30 bash "$root/install-titlebars.sh" --check >"$log" 2>&1
+timeout --foreground --kill-after=5 30 bash "$root/install-titlebars.sh" --check >"$log" 2>&1
 # Only execute an existing backend after checking it against the reviewed source.
 if verified "$helper" familiar-desktop-linux-x86_64 && [[ -x "$helper" ]]; then
-  timeout --kill-after=5 30 "$helper" desktop restore >"$log" 2>&1
-  timeout --kill-after=5 30 "$helper" titlebars disable >"$log" 2>&1
+  timeout --foreground --kill-after=5 30 "$helper" desktop restore >"$log" 2>&1
+  timeout --foreground --kill-after=5 30 "$helper" titlebars disable >"$log" 2>&1
 fi
 echo 'Downloading and verifying the Familiar backend…'
-timeout --kill-after=5 240 bash "$root/install-backend.sh" >"$log" 2>&1
+timeout --foreground --kill-after=5 240 bash "$root/install-backend.sh" >"$log" 2>&1
 echo 'Downloading and verifying window controls…'
-timeout --kill-after=5 240 bash "$root/install-titlebars.sh" >"$log" 2>&1
+timeout --foreground --kill-after=5 240 bash "$root/install-titlebars.sh" >"$log" 2>&1
 verified "$helper" familiar-desktop-linux-x86_64
 verified "$library" "hyprbars-linux-x86_64-$abi.so"
 echo 'Setting up your window controls…'
-timeout --kill-after=5 40 "$helper" titlebars setup --library "$library" --enable --style "$style" >"$log" 2>&1
+timeout --foreground --kill-after=5 40 "$helper" titlebars setup --library "$library" --enable --style "$style" >"$log" 2>&1
 jq -e '.state == "ready"' "$log" >/dev/null
 echo 'Activating Familiar…'
-timeout --kill-after=5 40 "$helper" titlebars apply --style "$style" --mode "$style" >"$log" 2>&1
+timeout --foreground --kill-after=5 40 "$helper" titlebars apply --style "$style" --mode "$style" >"$log" 2>&1
 jq -e '.state == "active" or .state == "off"' "$log" >/dev/null
 rm -f "$state/setup-pending"
 ready
