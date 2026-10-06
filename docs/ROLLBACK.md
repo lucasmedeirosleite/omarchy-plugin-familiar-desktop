@@ -1,14 +1,15 @@
 # Separate configuration and removal
 
-Familiar keeps its settings and generated configuration separate. Two guarded
-includes are still necessary for Hyprland to load optional title bars and the
-explicit keyboard preference on login/reload. It does not replace your config
+Familiar keeps its settings and generated configuration separate. Guarded
+includes let Hyprland load optional title bars, the explicit keyboard preference
+and the opt-in floating-window preference on login/reload. It does not replace your config
 with a complete preset.
 
 | Feature | Familiar-owned data | Personal config integration |
 | --- | --- | --- |
 | Dock, pins, placement | `~/.config/omarchy/familiar-desktop-*.json` | No Hyprland edits |
 | Title bars | `~/.config/omarchy/familiar-titlebars/titlebars.lua` and ownership record | Marked include in `hypr/looknfeel.lua` |
+| New floating windows | `~/.config/omarchy/familiar-windows/window-mode.lua` | Marked include at the end of `hypr/hyprland.lua` |
 | Caps Lock/Compose | `~/.config/omarchy/familiar-input/caps-lock.lua` | Marked include at the end of `hypr/hyprland.lua` |
 
 The Rust helpers respect `XDG_CONFIG_HOME` for the two Hyprland files and their
@@ -18,7 +19,7 @@ it does not rewrite the include. Choosing **Use configuration** removes the
 include and generated keyboard config. No keyboard override is installed merely
 by enabling Familiar.
 
-## Remove the v0.1.0 candidate
+## Remove the v0.1.1 candidate
 
 Run the script from the installed candidate, before deleting its folder:
 
@@ -28,7 +29,7 @@ bash ~/.config/omarchy/plugins/io.github.tcballard.familiar-desktop/uninstall.sh
 
 It restores Show Desktop windows recorded for the current session, refuses to
 continue if hidden/minimised windows remain, disables Familiar, resets the
-keyboard override, removes the owned title-bar include, explicitly unloads
+keyboard and floating-window overrides, removes the owned title-bar include, explicitly unloads
 Hyprbars, and checks the reload before asking Omarchy to delete the plugin.
 If it asks you to restore minimised windows, use the dock and rerun the command.
 The shared `special:minimized` workspace does not identify who minimised each
@@ -69,8 +70,10 @@ On a disposable profile, record both personal config files and their modes befor
 installation, including a file without a final newline. Install, select Normal
 Caps Lock then Compose, change title-bar style and dock position, and verify that
 only Familiar-owned blocks differ. Add an unrelated personal setting after
-installation, uninstall, and compare: that edit must remain and both hooks must
+installation, uninstall, and compare: that edit must remain and all enabled hooks must
 be gone. Check `hyprctl configerrors`, `hyprctl plugin list`, keyboard behavior and
 window visibility. Repeat removal and exercise a deliberately edited hook: it
 must stop without deleting the plugin. Portable fixtures do not prove live
 Hyprland rollback.
+
+Floating mode is opt-in and applies only when new windows open. Reset/uninstall removes the rule and preserves unrelated configuration; it does not retile windows already floating. Its recovery backups live under `omarchy/familiar-window-mode` in the XDG state directory.

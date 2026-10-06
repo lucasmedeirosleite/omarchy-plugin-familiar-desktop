@@ -1,6 +1,14 @@
 # Installer source identity
 
-The hardened bootstrap in `install.sh` installs the published v0.1.0 desktop
+## v0.1.1 candidate
+
+The repository `install.sh` is now an unexpanded template: it refuses to run until release CI inserts the exact built 40-character SHA into the standalone installer asset. The candidate bundle uses the same exact SHA. Settings copies a command for `repair.sh`, which repairs the installed source without any remote Git fetch or checkout. Neither path silently resolves a moving source tag. See [release gates](RELEASE-0.1.1.md).
+
+The following records the historical v0.1.0 bootstrap fix, which remains the stable README command until v0.1.1 is published.
+
+## v0.1.0 bootstrap history
+
+The hardened bootstrap at commit `57b6fc07b2221357f7d93e031940123e41f37b2c` installs the published v0.1.0 desktop
 at full commit `bda1ec617966b11fb8470788c74019350b38838f`. This is a separate
 bootstrap change after the release; it does not move v0.1.0 or replace its assets.
 Use the commit-pinned bootstrap command in the current README.

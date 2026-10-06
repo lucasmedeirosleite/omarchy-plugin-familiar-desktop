@@ -1,6 +1,11 @@
 // Exercise the actual release executable through the actual binary installer.
-const fs=require('node:fs');const path=require('node:path');const os=require('node:os');const assert=require('node:assert/strict');const {spawnSync}=require('node:child_process');
+const fs=require('node:fs');const path=require('node:path');const os=require('node:os');const assert=require('node:assert/strict');const {spawnSync,execFileSync}=require('node:child_process');
 const version=JSON.parse(fs.readFileSync('manifest.json')).version;
+const sourceSha=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
+const bootstrap=fs.readFileSync('release-assets/install.sh','utf8');
+assert.ok(bootstrap.includes("release_sha='"+sourceSha+"'"));
+assert.ok(bootstrap.includes("release='v"+version+"'"));
+assert.ok(!bootstrap.includes('@SOURCE_SHA@'));
 const root=fs.mkdtempSync(path.join(os.tmpdir(),'familiar-release-'));
 try {
  fs.copyFileSync('install-backend.sh',path.join(root,'install-backend.sh'));
