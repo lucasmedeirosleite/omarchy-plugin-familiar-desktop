@@ -32,7 +32,7 @@ The maintainer tested rc.5 on an XPS and approved the desktop for release. Runti
 
 Window controls also download as a checksum-verified prebuilt Hyprbars library. The initial supported target is Linux x86_64, Hyprland 0.56.2 commit `efb50993780079460b0cbed1363e2166a2de1d9f`, ABI `efb50993780079460b0cbed1363e2166a2de1d9f_aq_0.15_hu_0.14_hg_0.5_hc_0.1_hlg_0.6`. Unsupported ABIs stop before backend installation or title-bar configuration. The normal installer never runs Hyprpm, clones Hyprland, or installs a compiler. Missing assets, checksum failures and loader failures stop setup; they never trigger a source build. Existing Hyprbars ownership protections still apply.
 
-For a fresh installation, the installer registers Familiar using the standard `omarchy plugin add https://github.com/tcballard/omarchy-plugin-familiar-desktop.git --yes` command, then pins the release and completes setup before enabling it. You do not need to run that registration separately.
+For a fresh installation, the installer fetches the pinned release commit into a temporary local repository and verifies its identity before passing that checkout to `omarchy plugin add`. It then verifies the registered checkout and completes setup before enabling Familiar. You do not need to run registration separately.
 
 The shared `bin/familiar-desktop` Rust binary handles window actions, title-bar setup, theme parsing, app/icon scans and badge writes. Downloads happen in your terminal during explicit setup; privilege prompts are only needed for missing download tools. The hosted shell never compiles or downloads code.
 
