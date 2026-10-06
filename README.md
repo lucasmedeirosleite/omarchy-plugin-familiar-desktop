@@ -12,17 +12,31 @@ Familiar Desktop adds a mouse-friendly app dock to Omarchy Quattro. Launch or re
 
 *Rendered QML preview of the settings modal, using illustrative colours. A live Omarchy screenshot will replace this preview after on-device testing.*
 
-## Install v0.1.0
+## Install v0.1.1
 
-Familiar v0.1.0 includes dock positioning, Show Desktop/Restore, centred settings, optional window controls and an explicit Caps Lock/Compose preference.
+Familiar v0.1.1 adds mouse resizing, Floating/Tiling controls, optional Command editing shortcuts and trackpad gestures, plus installer reliability and source-pinned binary verification.
 
-**Installation guidance is being updated for v0.1.1.** The historical v0.1.0 bootstrap pins Git source but trusts binaries and checksums from the same mutable release. It does not meet the marketplace review's binary-identity requirement. Do not use that bootstrap as evidence that release binaries are bound to reviewed source.
+Restore minimised windows, then run this in an Omarchy Quattro terminal:
 
-The v0.1.1 candidate verifies backend and Hyprbars bytes against release-binaries.sha256 in its exact Git snapshot before execution or loading. The final release remains pending testing and marketplace re-review. See [source identity and limits](docs/INSTALLER-SOURCE-PIN.md).
+```bash
+(
+  set -euo pipefail
+  familiar_setup="$(mktemp -d)"
+  cd "$familiar_setup"
+  curl -fL --retry 3 https://github.com/tcballard/omarchy-plugin-familiar-desktop/releases/download/v0.1.1/install.sh -o install.sh
+  echo "2a68b44fa80daff10af116edb43a8b43cfbdc08a8ef8520c39d2b51239dfa083  install.sh" | sha256sum --check --strict
+  bash install.sh windows
+  omarchy restart shell
+)
+```
+
+Use `mac` for left-side controls. No GitHub login or compiler is required.
+
+The installer verifies backend and Hyprbars bytes against `release-binaries.sha256` in its exact Git snapshot before execution or loading. See [source identity and limits](docs/INSTALLER-SOURCE-PIN.md).
 
 The installer refuses local source changes, untracked files and unexpected ignored files. It checks compatibility, restores windows on v0.1.0 updates, unloads controls and disables Familiar before checkout, then verifies binaries before setup and enablement. A failed update stops for repair. Missing download tools may prompt for a package-manager password.
 
-The maintainer tested rc.5 on an XPS and approved the desktop for release. Runtime source is unchanged from that candidate; release preparation updates documentation and tag automation. Broader monitor, scaling and app coverage remains open. See [release notes](docs/v0.1.0.md) and [validation evidence](docs/RELEASE-0.1.0.md). The curated app collection is planned for v0.2.0; installed apps continue to work with the dock.
+The maintainer tested v0.1.1-rc.3 on an XPS and approved that exact source for [v0.1.1](https://github.com/tcballard/omarchy-plugin-familiar-desktop/releases/tag/v0.1.1). Broader monitor, scaling and app coverage remains open; marketplace re-review is pending. Settings navigation and scrolling will be improved in a later release ([#28](https://github.com/tcballard/omarchy-plugin-familiar-desktop/issues/28)). The curated app collection is planned for v0.2.0; installed apps continue to work with the dock.
 
 Window controls also download as a checksum-verified prebuilt Hyprbars library. The initial supported target is Linux x86_64, Hyprland 0.56.2 commit `efb50993780079460b0cbed1363e2166a2de1d9f`, ABI `efb50993780079460b0cbed1363e2166a2de1d9f_aq_0.15_hu_0.14_hg_0.5_hc_0.1_hlg_0.6`. Unsupported ABIs stop before backend installation or title-bar configuration. The normal installer never runs Hyprpm, clones Hyprland, or installs a compiler. Missing assets, checksum failures and loader failures stop setup; they never trigger a source build. Existing Hyprbars ownership protections still apply.
 
