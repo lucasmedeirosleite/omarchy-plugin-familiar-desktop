@@ -4,6 +4,7 @@ import "../components"
 
 TestCase {
     name: "SetupCard"
+    visible: true
     width: 800
     height: 800
     when: windowShown
