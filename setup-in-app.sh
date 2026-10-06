@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+# Explicit, user-started setup. Never reload the shell hosting the setup screen.
+set -Eeuo pipefail
+root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+mode="${1:-status}"
+style="${2:-windows}"
+[[ "$mode" == status || "$mode" == install ]] || exit 2
+[[ "$style" == windows || "$style" == mac ]] || exit 2
+state="${XDG_STATE_HOME:-$HOME/.local/state}/familiar-desktop"
+config="${XDG_CONFIG_HOME:-$HOME/.config}"
+abi='efb50993780079460b0cbed1363e2166a2de1d9f_aq_0.15_hu_0.14_hg_0.5_hc_0.1_hlg_0.6'
+library="$root/bin/hyprbars/$abi/hyprbars.so"
+helper="$root/bin/familiar-desktop"
+for tool in sha256sum awk jq flock timeout; do
+  command -v "$tool" >/dev/null || { echo "Required system tool is missing: $tool. Update Omarchy and retry."; exit 1; }
+done
+mkdir -p "$state"
+chmod 700 "$state"
+exec 9>"$state/setup.lock"
+flock -n 9 || { echo 'Setup is already running. Waiting for it to finish…'; exit 4; }
+verified() {
+  local file="$1" asset="$2" expected actual
+  [[ -f "$file" && ! -L "$file" && -f "$root/release-binaries.sha256" && ! -L "$root/release-binaries.sha256" ]] || return 1
+  expected="$(awk -v name="$asset" '$2 == name {print $1}' "$root/release-binaries.sha256")"
+  [[ "$expected" =~ ^[0-9a-f]{64}$ ]] || return 1
+  actual="$(sha256sum "$file")"
+  [[ "${actual%% *}" == "$expected" ]]
+}
+ready() {
+  [[ ! -e "$state/setup-pending" && -x "$helper" ]] || return 1
+  verified "$helper" familiar-desktop-linux-x86_64 || return 1
+  verified "$library" "hyprbars-linux-x86_64-$abi.so" || return 1
+  jq -e --arg source "$root" --arg library "$library" '.source == $source and .library == $library and .hookVersion == 2' "$config/omarchy/familiar-titlebars/owner.json" >/dev/null 2>&1 || return 1
+  grep -qF -- '-- BEGIN Familiar Desktop title bars' "$config/hypr/looknfeel.lua" 2>/dev/null
+}
+if [[ "$mode" == status ]]; then
+  if ready; then echo 'Familiar is ready.'; exit 0; fi
+  echo 'Set up Familiar to enable the dock and window controls.'
+  exit 3
+fi
+for tool in curl git hyprctl; do
+  command -v "$tool" >/dev/null || { echo "Required system tool is missing: $tool. Update Omarchy and retry."; exit 1; }
+done
+installed="$HOME/.config/omarchy/plugins/io.github.tcballard.familiar-desktop"
+[[ -d "$installed/.git" && ! -L "$installed" && "$(cd "$installed" && pwd -P)" == "$root" ]] || { echo 'Setup must run from the installed Familiar plugin.'; exit 1; }
+[[ -z "$(git -C "$root" status --porcelain --untracked-files=normal)" ]] || { echo 'The installed plugin has local changes. Restore the reviewed source before setup.'; exit 1; }
+log="$(mktemp "$state/setup-log.XXXXXX")"
+finish() {
+  local code=$?
+  if (( code != 0 )); then
+    echo 'Setup could not finish. Your personal settings have been kept. Retry below.'
+    tail -c 2400 "$log"
+    printf '\n'
+    if verified "$helper" familiar-desktop-linux-x86_64 && [[ -x "$helper" ]]; then
+      timeout --kill-after=2 15 "$helper" titlebars disable >/dev/null 2>&1 || true
+    fi
+  fi
+  rm -f "$log"
+}
+trap finish EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+# A persisted incomplete marker survives shell restart and prevents partial activation.
+printf 'pending\n' > "$state/setup-pending"
+echo 'Checking your desktop…'
+timeout --kill-after=5 30 bash "$root/install-titlebars.sh" --check >"$log" 2>&1
+# Only execute an existing backend after checking it against the reviewed source.
+if verified "$helper" familiar-desktop-linux-x86_64 && [[ -x "$helper" ]]; then
+  timeout --kill-after=5 30 "$helper" desktop restore >"$log" 2>&1
+  timeout --kill-after=5 30 "$helper" titlebars disable >"$log" 2>&1
+fi
+echo 'Downloading and verifying the Familiar backend…'
+timeout --kill-after=5 240 bash "$root/install-backend.sh" >"$log" 2>&1
+echo 'Downloading and verifying window controls…'
+timeout --kill-after=5 240 bash "$root/install-titlebars.sh" >"$log" 2>&1
+verified "$helper" familiar-desktop-linux-x86_64
+verified "$library" "hyprbars-linux-x86_64-$abi.so"
+echo 'Setting up your window controls…'
+timeout --kill-after=5 40 "$helper" titlebars setup --library "$library" --enable --style "$style" >"$log" 2>&1
+jq -e '.state == "ready"' "$log" >/dev/null
+echo 'Activating Familiar…'
+timeout --kill-after=5 40 "$helper" titlebars apply --style "$style" --mode "$style" >"$log" 2>&1
+jq -e '.state == "active" or .state == "off"' "$log" >/dev/null
+rm -f "$state/setup-pending"
+ready
+echo 'Familiar is ready.'

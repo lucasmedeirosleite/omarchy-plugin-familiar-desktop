@@ -32,6 +32,22 @@ Item {
     // Dock state & Multi-source Live Bar Position Tracking
     property bool opened: true
     property bool pluginEnabled: true
+    readonly property var setup: setupController
+    SetupController {
+        id: setupController
+        active: root.pluginEnabled
+        canStart: !titlebars.busy
+        onInstalled: function(style) {
+            root.readSettings()
+            root.setProfile(style)
+            root.refresh()
+            titlebars.refresh()
+        }
+    }
+    SetupWindow {
+        controller: setupController
+        screen: root.effectiveDockScreen || (Quickshell.screens.length ? Quickshell.screens[0] : null)
+    }
     property string shellConfigPath: Quickshell.env("HOME") + "/.config/omarchy/shell.json"
     property string detectedBarPosition: {
         if (shell && shell.barConfig && shell.barConfig.position) return shell.barConfig.position
@@ -446,6 +462,7 @@ Item {
     function refreshTitlebars() { titlebars.refresh() }
     TitlebarController {
         id: titlebars
+        available: setupController.ready
         enabled: root.titlebarMode !== "off" && root.pluginEnabled && root.dockEnabled
         mode: root.titlebarMode
         style: root.titlebarStyle
@@ -614,7 +631,7 @@ Item {
         return workspace !== null
     }
 
-    readonly property bool dockAvailable: root.opened
+    readonly property bool dockAvailable: setupController.ready && root.opened
         && root.pluginEnabled
         && root.dockEnabled
         && root.workspaceAllowed

@@ -330,9 +330,12 @@ BarWidget {
   }
 
   readonly property bool opened: settingsWindow.open
-  function open() { settingsWindow.open = true }
+  function open() {
+    if (desktopService && desktopService.setup && !desktopService.setup.ready) { desktopService.setup.show(); return }
+    settingsWindow.open = true
+  }
   function close() { settingsWindow.open = false }
-  function toggle() { settingsWindow.open = !settingsWindow.open }
+  function toggle() { if (settingsWindow.open) close(); else open() }
   function closeForPopoutSwitch() { close() }
 
   implicitWidth: button.implicitWidth
@@ -618,7 +621,7 @@ BarWidget {
             border.color: Color.popups.border
             Text {
               anchors.centerIn: parent
-              text: root.titlebarStatusText || "Copy one-time setup command"
+              text: "Set up or repair window controls"
               font.family: Style.font.family
               font.pixelSize: 11
               color: Color.popups.text
@@ -629,12 +632,12 @@ BarWidget {
               hoverEnabled: true
               cursorShape: Qt.PointingHandCursor
               onClicked: {
-                // Copy literal text via argv. Setup runs in the user's terminal,
-                // outside the shell, so failures remain visible and retryable.
-                var installer = Qt.resolvedUrl("repair.sh").toString().replace(/^file:\/\//, "")
-                var command = "bash " + DockCommands.quote(installer) + " " + DockCommands.quote(root.titlebarStyle)
-                DockCommands.run(Util, ["wl-copy", "--", command])
-                root.titlebarStatusText = "Copied — run in your terminal"
+                if (root.desktopService && root.desktopService.setup) {
+                  root.close()
+                  root.desktopService.setup.state = "needed"
+                  root.desktopService.setup.style = root.titlebarStyle
+                  root.desktopService.setup.show()
+                }
               }
             }
           }
