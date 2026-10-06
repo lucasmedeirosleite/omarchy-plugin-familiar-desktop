@@ -401,8 +401,10 @@ fn go_to_window_preserves_workspace_while_bring_here_moves_it() {
         &mut ipc,
     )
     .unwrap();
-    assert_eq!(ipc.calls.len(), 1);
+    assert_eq!(ipc.calls.len(), 2);
     assert!(ipc.calls[0].contains("focus"));
+    assert!(ipc.calls[1].contains("cursor.move"));
+    assert!(!ipc.calls.iter().any(|c| c.contains("hl.dsp.window.move")));
     ipc.calls.clear();
     dock::arrange(
         "bring-here",

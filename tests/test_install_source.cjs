@@ -12,13 +12,13 @@ try {
  const remote=path.join(root,'remote');fs.mkdirSync(remote);git(['init'],remote);
  git(['config','user.name','Fixture'],remote);git(['config','user.email','fixture@example.invalid'],remote);
  write(path.join(remote,'install-titlebars.sh'),'#!/bin/bash\necho "trusted-titlebars $*" >> "$LOG"\necho /fixture/hyprbars.so\n');
- write(path.join(remote,'install-backend.sh'),'#!/bin/bash\necho trusted-backend >> "$LOG"\nmkdir -p "$PLUGIN/bin"\nprintf \'#!/bin/bash\\necho familiar-desktop 0.1.0\\n\' > "$PLUGIN/bin/familiar-desktop"\nchmod +x "$PLUGIN/bin/familiar-desktop"\n');
+ write(path.join(remote,'install-backend.sh'),'#!/bin/bash\necho trusted-backend >> "$LOG"\nmkdir -p "$PLUGIN/bin"\nprintf \'#!/bin/bash\\necho familiar-desktop 0.1.1\\n\' > "$PLUGIN/bin/familiar-desktop"\nchmod +x "$PLUGIN/bin/familiar-desktop"\n');
  write(path.join(remote,'manifest.json'),'{"id":"io.github.tcballard.familiar-desktop"}');
  git(['add','.'],remote);git(['commit','-m','Reviewed fixture'],remote);const pin=git(['rev-parse','HEAD'],remote);
- git(['tag','v0.1.0'],remote);
+ git(['tag','v0.1.1'],remote);
  write(path.join(remote,'install-backend.sh'),'#!/bin/bash\necho UNREVIEWED-EXECUTED >> "$LOG"\nexit 99\n');
  git(['add','.'],remote);git(['commit','-m','Unreviewed moving branch'],remote);
- git(['tag','-f','v0.1.0'],remote);const moved=git(['rev-parse','HEAD'],remote);
+ git(['tag','-f','v0.1.1'],remote);const moved=git(['rev-parse','HEAD'],remote);
  for(const existing of [false,true])for(const fault of ['', 'fetch', 'checkout']){
   const home=path.join(root,`${existing}-${fault||'success'}`);fs.mkdirSync(home);
   const plugin=path.join(home,'.config/omarchy/plugins/io.github.tcballard.familiar-desktop');
