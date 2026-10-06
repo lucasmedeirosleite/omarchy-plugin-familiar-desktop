@@ -49,7 +49,9 @@ pub fn hook(mode: &str, manifest: &Path) -> Result<String> {
     let command = common::shell_quote(&helper.to_string_lossy());
     let mut body = String::new();
     if mode == "all" || mode == "workspace" {
-        body.push_str("    hl.gesture({ fingers = 3, direction = 'horizontal', action = 'workspace' })\n");
+        body.push_str(
+            "    hl.gesture({ fingers = 3, direction = 'horizontal', action = 'workspace' })\n",
+        );
     }
     if mode == "all" || mode == "desktop" {
         body.push_str(&format!(
@@ -84,7 +86,9 @@ fn generated_content(paths: &Paths) -> Result<Option<String>> {
                 .iter()
                 .any(|mode| hook(mode, &paths.manifest).is_ok_and(|expected| value == expected))
             {
-                return Err("Familiar's separate trackpad config was edited; no file changed".into());
+                return Err(
+                    "Familiar's separate trackpad config was edited; no file changed".into(),
+                );
             }
             Ok(Some(value))
         }
