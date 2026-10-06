@@ -8,6 +8,9 @@ plugin_id='io.github.tcballard.familiar-desktop'
 plugin_dir="$HOME/.config/omarchy/plugins/$plugin_id"
 repository='https://github.com/tcballard/omarchy-plugin-familiar-desktop.git'
 release='v0.1.0'
+# Reviewed, published v0.1.0 source. Never resolve executable source via a tag.
+release_sha='bda1ec617966b11fb8470788c74019350b38838f'
+[[ "$release_sha" =~ ^[0-9a-f]{40}$ ]] || { echo 'Invalid release source pin.' >&2; exit 1; }
 style="${1:-mac}"
 if [[ $# -gt 1 || ( "$style" != mac && "$style" != windows ) ]]; then
   echo 'Usage: bash install.sh [mac|windows]' >&2
@@ -33,11 +36,22 @@ expected_abi='efb50993780079460b0cbed1363e2166a2de1d9f_aq_0.15_hu_0.14_hg_0.5_hc
 [[ "$(uname -s)" == Linux && "$(uname -m)" == x86_64 ]] || { echo 'Familiar requires Linux x86_64.' >&2; exit 1; }
 abi="$(hyprctl version | sed -n 's/^Version ABI string: //p')"
 [[ "$abi" == "$expected_abi" ]] || { printf 'Unsupported Hyprland ABI: %s\nExpected: %s\nNothing installed.\n' "$abi" "$expected_abi" >&2; exit 1; }
-if [[ -e "$plugin_dir" && ! -d "$plugin_dir/.git" ]]; then
+if [[ -L "$plugin_dir" || ( -e "$plugin_dir" && ! -d "$plugin_dir/.git" ) ]]; then
   echo "Refusing to replace an unmanaged directory: $plugin_dir" >&2; exit 1
 fi
 if [[ ! -d "$plugin_dir/.git" ]]; then
-  omarchy plugin add "$repository" --yes
+  # Register only an already verified detached checkout. Adding the remote URL
+  # first would expose the moving default branch to the shell's plugin rescan.
+  source_stage="$(mktemp -d)"
+  trap 'rm -rf -- "$source_stage"' EXIT
+  git init "$source_stage"
+  git -C "$source_stage" fetch --no-tags "$repository" "$release_sha"
+  [[ "$(git -C "$source_stage" rev-parse --verify 'FETCH_HEAD^{commit}')" == "$release_sha" ]] || { echo 'Fetched source does not match the pinned commit.' >&2; exit 1; }
+  git -C "$source_stage" checkout --detach "$release_sha"
+  [[ "$(git -C "$source_stage" rev-parse --verify HEAD)" == "$release_sha" ]] || { echo 'Staged source does not match the pinned commit.' >&2; exit 1; }
+  omarchy plugin add "$source_stage" --yes
+  git -C "$plugin_dir" remote set-url origin "$repository"
+  [[ "$(git -C "$plugin_dir" rev-parse --verify HEAD)" == "$release_sha" ]] || { echo 'Registered source does not match the pinned commit.' >&2; exit 1; }
 fi
 [[ -d "$plugin_dir/.git" ]] || { echo "Expected a Git installation at $plugin_dir" >&2; exit 1; }
 check_clean() {
@@ -52,7 +66,8 @@ check_clean() {
   done <<< "$ignored_files"
 }
 check_clean
-git -C "$plugin_dir" fetch "$repository" "refs/tags/$release:refs/tags/$release"
+git -C "$plugin_dir" fetch --no-tags "$repository" "$release_sha"
+[[ "$(git -C "$plugin_dir" rev-parse --verify 'FETCH_HEAD^{commit}')" == "$release_sha" ]] || { echo 'Fetched source does not match the pinned release commit.' >&2; exit 1; }
 # Restore windows and unload owned controls before changing source or binaries.
 helper="$plugin_dir/bin/familiar-desktop"
 if [[ -x "$helper" ]]; then
@@ -64,7 +79,8 @@ if [[ -x "$helper" ]]; then
 fi
 omarchy plugin disable "$plugin_id"
 update_started=true
-git -C "$plugin_dir" checkout --detach "$release"
+git -C "$plugin_dir" checkout --detach "$release_sha"
+[[ "$(git -C "$plugin_dir" rev-parse --verify HEAD)" == "$release_sha" ]] || { echo 'Checked-out source does not match the pinned release commit; Familiar remains disabled for this update.' >&2; exit 1; }
 check_clean
 step 3 'Checking compatibility and installing the verified release backend'
 bash "$plugin_dir/install-titlebars.sh" --check

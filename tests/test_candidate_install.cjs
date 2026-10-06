@@ -33,7 +33,8 @@ function run(fault='', existing=true) {
 for(const existing of [false,true]) {
  const r=run('',existing);assert.equal(r.status,0,r.stderr);assert.equal(r.installed,true);
  assert.match(r.log,/checkout --detach a{40}/);assert.match(r.log,/backend titlebars setup/);
- assert.ok(r.log.indexOf('plugin disable')<r.log.indexOf('checkout --detach'));
+ assert.ok(r.log.indexOf('plugin disable')<r.log.lastIndexOf('checkout --detach'));
+ if(!existing)assert.ok(r.log.indexOf('checkout --detach')<r.log.indexOf('plugin add'));
  assert.ok(r.log.indexOf('backend titlebars setup')<r.log.indexOf('plugin enable'));
  assert.doesNotMatch(r.log,/cargo|rustup|clippy|hyprpm|sudo/);
 }

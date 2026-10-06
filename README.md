@@ -19,10 +19,12 @@ Familiar v0.1.0 includes dock positioning, Show Desktop/Restore, centred setting
 Run this in an Omarchy Quattro terminal for Windows-style controls on the right:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/tcballard/omarchy-plugin-familiar-desktop/v0.1.0/install.sh) windows
+bash <(curl -fsSL https://raw.githubusercontent.com/tcballard/omarchy-plugin-familiar-desktop/57b6fc07b2221357f7d93e031940123e41f37b2c/install.sh) windows
 ```
 
 Use `mac` instead of `windows` for controls on the left. The command installs or updates to the exact release and downloads prebuilt, checksum-verified Linux x86_64 components. No GitHub login, Cargo, Rustup or Clippy is required. Restore minimised windows first; then run `omarchy restart shell` to reload updated UI components.
+
+The bootstrap above is pinned to an immutable commit and installs reviewed v0.1.0 source `bda1ec617966b11fb8470788c74019350b38838f`. It verifies source identity before registration and before executing downloaded installation scripts. Use this command for hardened installation and repair; the original Settings repair action in the published v0.1.0 checkout is unchanged. See [source identity and limits](docs/INSTALLER-SOURCE-PIN.md).
 
 The installer refuses local source changes, untracked files and unexpected ignored files. It checks compatibility, restores windows on v0.1.0 updates, unloads controls and disables Familiar before checkout, then verifies binaries before setup and enablement. A failed update stops for repair. Missing download tools may prompt for a package-manager password.
 
@@ -142,7 +144,7 @@ legacy migration and XPS acceptance.
 
 ## Updates and retained preferences
 
-Rerun the versioned installation command above to install or repair v0.1.0. Use the installer from a newer release when upgrading. For removal, use the installed `uninstall.sh` shown above; the generic remove command alone does not perform the owned-configuration cleanup.
+Rerun the commit-pinned installation command above to install or repair v0.1.0. Use the installer from a newer release when upgrading. For removal, use the installed `uninstall.sh` shown above; the generic remove command alone does not perform the owned-configuration cleanup.
 
 The plugin writes `~/.config/omarchy/familiar-desktop-settings.json`, `~/.config/omarchy/familiar-desktop-pinned.json` and `~/.local/state/omarchy/familiar-desktop-badges.json`. Removing it leaves these preferences and badge data in place. Dock widgets appear alongside existing bar widgets. Dock settings only change Familiar Desktop; `shell.json` is read for bar placement and is never written by this plugin. Switching dock widgets off preserves your selection for when you turn them back on. It does not install the [Familiar theme](https://github.com/tcballard/omarchy-theme-familiar), Task Manager or OmaStore.
 

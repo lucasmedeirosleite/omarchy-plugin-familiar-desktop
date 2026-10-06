@@ -20,11 +20,22 @@ abi="$(hyprctl version | sed -n 's/^Version ABI string: //p')"
 (cd "$bundle_dir" && sha256sum --check --strict SHA256SUMS)
 chmod u+x "$bundle_dir/familiar-desktop-linux-x86_64"
 [[ "$("$bundle_dir/familiar-desktop-linux-x86_64" --version)" == "familiar-desktop $candidate_version" ]] || { echo 'Candidate binary has the wrong version.' >&2; exit 1; }
-if [[ -e "$plugin_dir" && ! -d "$plugin_dir/.git" ]]; then
+if [[ -L "$plugin_dir" || ( -e "$plugin_dir" && ! -d "$plugin_dir/.git" ) ]]; then
   echo "Refusing to replace an unmanaged directory: $plugin_dir" >&2; exit 1
 fi
 if [[ ! -d "$plugin_dir/.git" ]]; then
-  omarchy plugin add "$repository" --yes
+  # Register only an already verified detached checkout. Adding the remote URL
+  # first would expose the moving default branch to the shell's plugin rescan.
+  source_stage="$(mktemp -d)"
+  trap 'rm -rf -- "$source_stage"' EXIT
+  git init "$source_stage"
+  git -C "$source_stage" fetch --no-tags "$repository" "$candidate_sha"
+  [[ "$(git -C "$source_stage" rev-parse --verify 'FETCH_HEAD^{commit}')" == "$candidate_sha" ]] || { echo 'Fetched source does not match the pinned commit.' >&2; exit 1; }
+  git -C "$source_stage" checkout --detach "$candidate_sha"
+  [[ "$(git -C "$source_stage" rev-parse --verify HEAD)" == "$candidate_sha" ]] || { echo 'Staged source does not match the pinned commit.' >&2; exit 1; }
+  omarchy plugin add "$source_stage" --yes
+  git -C "$plugin_dir" remote set-url origin "$repository"
+  [[ "$(git -C "$plugin_dir" rev-parse --verify HEAD)" == "$candidate_sha" ]] || { echo 'Registered source does not match the pinned commit.' >&2; exit 1; }
 fi
 [[ -z "$(git -C "$plugin_dir" status --porcelain --untracked-files=all)" ]] || { echo 'Local changes found. Preserve them before testing this candidate.' >&2; exit 1; }
 while IFS= read -r ignored; do
@@ -32,8 +43,8 @@ while IFS= read -r ignored; do
     *) echo "Unexpected ignored file: $ignored. Preserve it before testing." >&2; exit 1;;
   esac
 done < <(git -C "$plugin_dir" ls-files --others --ignored --exclude-standard)
-git -C "$plugin_dir" fetch "$repository" "$candidate_sha"
-[[ "$(git -C "$plugin_dir" rev-parse FETCH_HEAD)" == "$candidate_sha" ]] || exit 1
+git -C "$plugin_dir" fetch --no-tags "$repository" "$candidate_sha"
+[[ "$(git -C "$plugin_dir" rev-parse --verify 'FETCH_HEAD^{commit}')" == "$candidate_sha" ]] || exit 1
 previous_sha="$(git -C "$plugin_dir" rev-parse HEAD)"
 printf 'Testing %s (%s). Previous checkout: %s\n' "$candidate_version" "$candidate_sha" "$previous_sha"
 # Recover any windows hidden by an earlier candidate before disabling its service.
@@ -43,6 +54,7 @@ if [[ -x "$plugin_dir/bin/familiar-desktop" ]] && [[ "$("$plugin_dir/bin/familia
 fi
 omarchy plugin disable "$plugin_id"
 git -C "$plugin_dir" checkout --detach "$candidate_sha"
+[[ "$(git -C "$plugin_dir" rev-parse --verify HEAD)" == "$candidate_sha" ]] || { echo 'Checked-out source does not match the candidate commit.' >&2; exit 1; }
 [[ -z "$(git -C "$plugin_dir" status --porcelain --untracked-files=all)" ]] || { echo 'Checkout is dirty; plugin left disabled.' >&2; exit 1; }
 mkdir -p "$plugin_dir/bin/hyprbars/$abi"
 install -m 755 "$bundle_dir/familiar-desktop-linux-x86_64" "$plugin_dir/bin/.familiar-desktop.candidate"
