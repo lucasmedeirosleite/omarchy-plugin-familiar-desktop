@@ -7,7 +7,9 @@ const dir=path.resolve('release-assets');fs.mkdirSync(dir,{recursive:true});
 if(fs.readdirSync(dir).length)throw Error('Release output must be empty');
 const write=(name,data)=>fs.writeFileSync(path.join(dir,name),JSON.stringify(data,null,2)+'\n');
 const item=name=>{const bytes=fs.readFileSync(path.join(dir,name));return {name,bytes:bytes.length,sha256:crypto.createHash('sha256').update(bytes).digest('hex')};};
-const binary='familiar-desktop-linux-x86_64';fs.copyFileSync(process.argv[2],path.join(dir,binary));fs.chmodSync(path.join(dir,binary),0o755);
+const pins=fs.readFileSync('release-binaries.sha256','utf8');
+const verifyPin=(name,file)=>{const rows=pins.trim().split('\n').filter(row=>row.split(/\s+/)[1]===name);if(rows.length!==1||!/^([0-9a-f]{64})  \S+$/.test(rows[0])||crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')!==rows[0].slice(0,64))throw Error('Built asset differs from reviewed source digest: '+name);};
+const binary='familiar-desktop-linux-x86_64';verifyPin(binary,process.argv[2]);fs.copyFileSync(process.argv[2],path.join(dir,binary));fs.chmodSync(path.join(dir,binary),0o755);
 if(execFileSync(path.join(dir,binary),['--version'],{encoding:'utf8'}).trim()!==`familiar-desktop ${version}`)throw Error('Asset version differs from manifest');
 const archive=`familiar-desktop-${version}-source.tar.gz`;execFileSync('git',['archive','--format=tar.gz',`--prefix=familiar-desktop-${version}/`,'-o',path.join(dir,archive),'HEAD']);
 write('SOURCE-MANIFEST.json',{schemaVersion:1,version,source,files:git('ls-files').split('\n').map(name=>({name,sha256:crypto.createHash('sha256').update(fs.readFileSync(name)).digest('hex')}))});
@@ -20,6 +22,7 @@ write('RELEASE-MANIFEST.json',{schemaVersion:1,version,source,artifacts:[item(bi
 const hyprbarsDir=path.resolve('hyprbars-assets');
 const hyprbarsNames=fs.readdirSync(hyprbarsDir);
 if(!hyprbarsNames.some(n=>n.startsWith('hyprbars-linux-x86_64-')&&n.endsWith('.so')))throw Error('Missing prebuilt Hyprbars; refusing incomplete release');
+for(const name of hyprbarsNames.filter(n=>n.endsWith('.so')))verifyPin(name,path.join(hyprbarsDir,name));
 for(const name of hyprbarsNames)fs.copyFileSync(path.join(hyprbarsDir,name),path.join(dir,name));
 const releaseManifest=JSON.parse(fs.readFileSync(path.join(dir,'RELEASE-MANIFEST.json')));
 releaseManifest.artifacts.push(...hyprbarsNames.map(item));

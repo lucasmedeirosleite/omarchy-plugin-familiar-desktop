@@ -22,8 +22,14 @@ function run(fault='', existing=true) {
   fs.writeFileSync(path.join(bundle,`hyprbars-linux-x86_64-${abi}.so`),'fixture library');
   const sums=fs.readdirSync(bundle).map(name=>crypto.createHash('sha256').update(fs.readFileSync(path.join(bundle,name))).digest('hex')+'  '+name+'\n').join('');
   fs.writeFileSync(path.join(bundle,'SHA256SUMS'),sums);
+  fs.writeFileSync(path.join(root,'pins'),sums);
+  if(fault==='substitution') {
+   fs.appendFileSync(path.join(bundle,'familiar-desktop-linux-x86_64'),'echo SUBSTITUTED >> "$LOG"\n');
+   const changed=fs.readdirSync(bundle).filter(n=>n!=='SHA256SUMS').map(name=>crypto.createHash('sha256').update(fs.readFileSync(path.join(bundle,name))).digest('hex')+'  '+name+'\n').join('');
+   fs.writeFileSync(path.join(bundle,'SHA256SUMS'),changed);
+  }
   if(fault==='checksum')fs.appendFileSync(path.join(bundle,'familiar-desktop-linux-x86_64'),'changed');
-  const mock=`#!/bin/bash\nname="$(basename "$0")"\necho "$name $*" >> "$LOG"\ncase "$name" in\n hyprctl) echo 'Version ABI string: ${fault==='abi'?'unsupported':abi}';;\n omarchy) if [[ "$*" == plugin\\ add* ]]; then mkdir -p "$PLUGIN/.git"; fi;;\n git) case "$*" in\n *status*) [[ "$FAULT" != dirty && "$FAULT" != untracked ]] || echo '?? user.qml';;\n *ls-files*) [[ "$FAULT" != ignored ]] || echo ignored.qml;;\n *rev-parse*) [[ "$FAULT" != wrong-sha ]] && echo '${sha}' || echo bad;;\n esac;;\n cargo|rustup|clippy|cc|hyprpm) exit 99;;\nesac\nexit 0\n`;
+  const mock=`#!/bin/bash\nname="$(basename "$0")"\necho "$name $*" >> "$LOG"\ncase "$name" in\n hyprctl) echo 'Version ABI string: ${fault==='abi'?'unsupported':abi}';;\n omarchy) if [[ "$*" == plugin\\ add* ]]; then mkdir -p "$PLUGIN/.git"; fi;;\n git) case "$*" in\n *show*) cat "$HOME/pins";;\n *status*) [[ "$FAULT" != dirty && "$FAULT" != untracked ]] || echo '?? user.qml';;\n *ls-files*) [[ "$FAULT" != ignored ]] || echo ignored.qml;;\n *rev-parse*) [[ "$FAULT" != wrong-sha ]] && echo '${sha}' || echo bad;;\n esac;;\n cargo|rustup|clippy|cc|hyprpm) exit 99;;\nesac\nexit 0\n`;
   for(const name of ['omarchy','omarchy-shell','hyprctl','git','cargo','rustup','clippy','cc','hyprpm']) fs.writeFileSync(path.join(tools,name),mock,{mode:0o755});
   const log=path.join(root,'calls');
   const result=spawnSync('/bin/bash',[path.join(bundle,'install-candidate.sh'),'windows'],{encoding:'utf8',env:{...process.env,HOME:root,PATH:tools+':/usr/bin:/bin',FAULT:fault,PLUGIN:plugin,LOG:log}});
@@ -38,8 +44,8 @@ for(const existing of [false,true]) {
  assert.ok(r.log.indexOf('backend titlebars setup')<r.log.indexOf('plugin enable'));
  assert.doesNotMatch(r.log,/cargo|rustup|clippy|hyprpm|sudo/);
 }
-for(const fault of ['abi','checksum','wrong-version','dirty','untracked','ignored','unmanaged','wrong-sha']) {
- const r=run(fault);assert.notEqual(r.status,0,fault);assert.equal(r.installed,false,fault);
+for(const fault of ['abi','checksum','substitution','wrong-version','dirty','untracked','ignored','unmanaged','wrong-sha']) {
+ const r=run(fault);assert.notEqual(r.status,0,fault);assert.equal(r.installed,false,fault);if(fault==='substitution')assert.doesNotMatch(r.log,/backend|SUBSTITUTED/);
  assert.doesNotMatch(r.log,/plugin disable|checkout --detach|plugin enable/,fault);
 }
 const failed=run('setup');assert.notEqual(failed.status,0);assert.doesNotMatch(failed.log,/plugin enable/);

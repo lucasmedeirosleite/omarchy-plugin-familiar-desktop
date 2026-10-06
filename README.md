@@ -16,15 +16,9 @@ Familiar Desktop adds a mouse-friendly app dock to Omarchy Quattro. Launch or re
 
 Familiar v0.1.0 includes dock positioning, Show Desktop/Restore, centred settings, optional window controls and an explicit Caps Lock/Compose preference.
 
-Run this in an Omarchy Quattro terminal for Windows-style controls on the right:
+**Installation guidance is being updated for v0.1.1.** The historical v0.1.0 bootstrap pins Git source but trusts binaries and checksums from the same mutable release. It does not meet the marketplace review's binary-identity requirement. Do not use that bootstrap as evidence that release binaries are bound to reviewed source.
 
-```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/tcballard/omarchy-plugin-familiar-desktop/57b6fc07b2221357f7d93e031940123e41f37b2c/install.sh) windows
-```
-
-Use `mac` instead of `windows` for controls on the left. The command installs or updates to the exact release and downloads prebuilt, checksum-verified Linux x86_64 components. No GitHub login, Cargo, Rustup or Clippy is required. Restore minimised windows first; then run `omarchy restart shell` to reload updated UI components.
-
-The bootstrap above is pinned to an immutable commit and installs reviewed v0.1.0 source `bda1ec617966b11fb8470788c74019350b38838f`. It verifies source identity before registration and before executing downloaded installation scripts. Use this command for hardened installation and repair; the original Settings repair action in the published v0.1.0 checkout is unchanged. See [source identity and limits](docs/INSTALLER-SOURCE-PIN.md).
+The v0.1.1 candidate verifies backend and Hyprbars bytes against release-binaries.sha256 in its exact Git snapshot before execution or loading. The final release remains pending testing and marketplace re-review. See [source identity and limits](docs/INSTALLER-SOURCE-PIN.md).
 
 The installer refuses local source changes, untracked files and unexpected ignored files. It checks compatibility, restores windows on v0.1.0 updates, unloads controls and disables Familiar before checkout, then verifies binaries before setup and enablement. A failed update stops for repair. Missing download tools may prompt for a package-manager password.
 
