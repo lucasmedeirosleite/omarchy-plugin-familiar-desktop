@@ -6,6 +6,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const {spawnSync} = require('node:child_process');
 const installer = path.resolve(__dirname, '../install.sh');
+const sourceSha = 'bda1ec617966b11fb8470788c74019350b38838f';
 let passed = 0;
 function run({existing=false, dirty=false, repair=false, failRepair=false, missing=false, style='mac', fault='', arch='x86_64', noCompiler=false, badAbi=false, titlebarFault='', lifecycle='', oldVersion='0.1.0', ignored='' }={}) {
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'familiar-install-'));
@@ -30,7 +31,7 @@ function run({existing=false, dirty=false, repair=false, failRepair=false, missi
   if(lifecycle==='unmanaged') {fs.rmSync(path.join(plugin,'.git'),{recursive:true});}
   if(lifecycle)fs.writeFileSync(path.join(plugin,'bin/familiar-desktop'),`#!/bin/bash\necho "old-helper $*" >> "$LOG"\nif [[ "$1" == --version ]]; then echo 'familiar-desktop ${oldVersion}'; fi\nif [[ "$*" == 'desktop restore' && "$LIFECYCLE" == restore-failure ]]; then exit 1; fi\nif [[ "$*" == 'titlebars disable' && "$LIFECYCLE" == unload-failure ]]; then exit 1; fi\n`,{mode:0o755});
   if(lifecycle)fs.chmodSync(path.join(plugin,'bin/familiar-desktop'),0o755);
-  const mock=`#!/bin/bash\nname="$(basename "$0")"\necho "$name $*" >> "$LOG"\ncase "$name" in\nomarchy) if [[ "$*" == plugin\\ add* ]]; then mkdir -p "$(dirname "$PLUGIN")"; cp -r "$FIXTURE" "$PLUGIN"; fi;;\ngit) case "$*" in\n *status*) if [[ "$LIFECYCLE" == status-failure ]]; then exit 1; fi; if [[ "$DIRTY" == 1 ]]; then echo ' M README.md'; elif [[ "$LIFECYCLE" == untracked || ( "$LIFECYCLE" == dirty-after-checkout && -f "$HOME/checked-out" ) ]]; then echo '?? user.qml'; fi;;\n *ls-files*) [[ "$LIFECYCLE" != ignored-failure ]] || exit 1; printf '%s' "$IGNORED";;\n *fetch*) [[ "$LIFECYCLE" != fetch-failure ]] || exit 1;;\n *checkout*) [[ "$LIFECYCLE" != checkout-failure ]] || exit 1; touch "$HOME/checked-out";;\n esac;;\nhyprctl) [[ "$MISSING" != 1 ]] || exit 1; echo "Version ABI string: $ABI";;\nuname) if [[ "$*" == -m ]]; then echo "$ARCH"; else echo Linux; fi;;\ncurl) [[ "$FAULT" != download ]] || exit 22; if [[ "$*" == *SHA256SUMS* ]]; then cp "$SUMS" "\${@: -1}"; elif [[ "$*" == *hyprbars-linux* ]]; then [[ "$TITLEBAR_FAULT" != download ]] || exit 22; cp "$TITLEBAR" "\${@: -1}"; else cp "$ASSET" "\${@: -1}"; fi;;\ncargo|rustup|clippy|make|cc) exit 99;;\nesac\n`;
+  const mock=`#!/bin/bash\nname="$(basename "$0")"\necho "$name $*" >> "$LOG"\ncase "$name" in\nomarchy) if [[ "$*" == plugin\\ add* ]]; then mkdir -p "$(dirname "$PLUGIN")"; cp -r "$FIXTURE" "$PLUGIN"; fi;;\ngit) case "$*" in\n *status*) if [[ "$LIFECYCLE" == status-failure ]]; then exit 1; fi; if [[ "$DIRTY" == 1 ]]; then echo ' M README.md'; elif [[ "$LIFECYCLE" == untracked || ( "$LIFECYCLE" == dirty-after-checkout && -f "$HOME/checked-out" ) ]]; then echo '?? user.qml'; fi;;\n *ls-files*) [[ "$LIFECYCLE" != ignored-failure ]] || exit 1; printf '%s' "$IGNORED";;\n *rev-parse*) if [[ \"$LIFECYCLE\" == wrong-source || ( \"$LIFECYCLE\" == wrong-checkout && -f \"$HOME/checked-out\" ) ]]; then echo bad; else echo '${sourceSha}'; fi;;\n *fetch*) [[ "$LIFECYCLE" != fetch-failure ]] || exit 1;;\n *checkout*) [[ "$LIFECYCLE" != checkout-failure ]] || exit 1; touch "$HOME/checked-out";;\n esac;;\nhyprctl) [[ "$MISSING" != 1 ]] || exit 1; echo "Version ABI string: $ABI";;\nuname) if [[ "$*" == -m ]]; then echo "$ARCH"; else echo Linux; fi;;\ncurl) [[ "$FAULT" != download ]] || exit 22; if [[ "$*" == *SHA256SUMS* ]]; then cp "$SUMS" "\${@: -1}"; elif [[ "$*" == *hyprbars-linux* ]]; then [[ "$TITLEBAR_FAULT" != download ]] || exit 22; cp "$TITLEBAR" "\${@: -1}"; else cp "$ASSET" "\${@: -1}"; fi;;\ncargo|rustup|clippy|make|cc) exit 99;;\nesac\n`;
   for(const name of ['omarchy','omarchy-shell','hyprctl','hyprpm','cargo','rustup','clippy','git','sudo','curl','uname',...(!noCompiler?['make','cc']:[])])fs.writeFileSync(path.join(bin,name),mock,{mode:0o755});
   const log=path.join(root,'calls');
   const p=spawnSync('/bin/bash',[installer,style],{encoding:'utf8',env:{...process.env,HOME:root,PATH:bin+':/usr/bin:/bin',LOG:log,PLUGIN:plugin,FIXTURE:fixture,ASSET:asset,SUMS:path.join(root,'sums'),FAULT:fault,LIFECYCLE:lifecycle,IGNORED:ignored,TITLEBAR_FAULT:titlebarFault,TITLEBAR:titlebar,ABI:badAbi?'unsupported':abi,ARCH:arch,DIRTY:+dirty+'',REPAIR:+repair+'',FAIL_REPAIR:+failRepair+'',MISSING:+missing+''}});
@@ -39,7 +40,7 @@ function run({existing=false, dirty=false, repair=false, failRepair=false, missi
  }finally{fs.rmSync(root,{recursive:true,force:true});}
 }
 for(const existing of [false,true]){
- const r=run({existing});assert.equal(r.status,0,r.stderr);assert.equal(r.log.includes('omarchy plugin add'),!existing);assert.ok(r.log.includes(`checkout --detach v${version}\n`));assert.doesNotMatch(r.log,/--install-dependency|cargo|rustup|clippy|forbidden-build|sudo/);assert.ok(r.log.indexOf('helper --version')<r.log.indexOf('omarchy plugin enable'));assert.deepEqual(r.staging,[]);passed++;
+ const r=run({existing});assert.equal(r.status,0,r.stderr);assert.equal(r.log.includes('omarchy plugin add'),!existing);assert.ok(r.log.includes(`checkout --detach ${sourceSha}\n`));assert.doesNotMatch(r.log,/--install-dependency|cargo|rustup|clippy|forbidden-build|sudo/);assert.ok(r.log.indexOf('helper --version')<r.log.indexOf('omarchy plugin enable'));assert.deepEqual(r.staging,[]);passed++;
 }
 let r=run({style:'windows'});assert.equal(r.status,0,r.stderr);assert.match(r.log,/setup --library .*hyprbars.so --enable --style windows/);passed++;
 r=run({existing:true,dirty:true});assert.notEqual(r.status,0);assert.doesNotMatch(r.log,/checkout|helper|plugin enable/);passed++;
@@ -72,12 +73,12 @@ for (const oldVersion of ['0.1.0', '0.0.6']) {
  else assert.doesNotMatch(result.log,/old-helper desktop restore/);
  for(let i=1;i<events.length;i++)assert.ok(result.log.indexOf(events[i-1])<result.log.indexOf(events[i]),events.join(' -> '));
 }
-for (const lifecycle of ['unmanaged','untracked','status-failure','ignored-failure','fetch-failure','restore-failure','unload-failure','checkout-failure','dirty-after-checkout']) {
+for (const lifecycle of ['unmanaged','untracked','status-failure','ignored-failure','fetch-failure','wrong-source','wrong-checkout','restore-failure','unload-failure','checkout-failure','dirty-after-checkout']) {
  const result=run({existing:true,lifecycle});
  assert.notEqual(result.status,0,lifecycle);
  assert.doesNotMatch(result.log,/helper titlebars setup|omarchy plugin enable/,lifecycle);
- if(!['checkout-failure','dirty-after-checkout'].includes(lifecycle))assert.doesNotMatch(result.log,/checkout --detach/,lifecycle);
- if(['checkout-failure','dirty-after-checkout'].includes(lifecycle))assert.match(result.stderr,/disabled for this update/);
+ if(!['checkout-failure','wrong-checkout','dirty-after-checkout'].includes(lifecycle))assert.doesNotMatch(result.log,/checkout --detach/,lifecycle);
+ if(['checkout-failure','wrong-checkout','dirty-after-checkout'].includes(lifecycle))assert.match(result.stderr,/disabled for this update/);
 }
 for(const ignored of ['notes.qml','bin/.download.old/asset']) {
  const result=run({existing:true,lifecycle:'success',ignored});
