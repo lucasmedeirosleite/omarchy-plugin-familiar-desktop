@@ -267,6 +267,10 @@ Item {
     WindowModeController { id: windowModeController }
     readonly property var gestures: gesturesController
     GesturesController { id: gesturesController }
+    readonly property var borderResize: borderResizeController
+    InputPreferenceController { id: borderResizeController; kind: "resize" }
+    readonly property var commandShortcuts: commandShortcutsController
+    InputPreferenceController { id: commandShortcutsController; kind: "command" }
 
     readonly property var desktopTools: desktopToolsAdapter
     DesktopActions { id: desktopToolsAdapter; onCompleted: function(operation) { root.updateDockItems(); minimizeRefreshTimer.restart() } }

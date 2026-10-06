@@ -19,3 +19,14 @@ Run required portable/Rust/QML/install/update/remove checks and release prefligh
 The repository install.sh is a template with @SOURCE_SHA@ and deliberately refuses execution. scripts/prepare-release.cjs emits install.sh with the exact built source SHA, includes it in the release manifest and SHA256SUMS, and emits the test bundle's pinned install-candidate.sh. Inspect these pins against the final main SHA before publication. Obtain source provenance from the immutable reviewed commit; same-release checksums are not independent signatures.
 
 After publishing and verifying all downloads, versions, checksums, manifests and supported ABI, update the README installation command to the new bootstrap at an immutable source location (or explicitly document the trust of downloading the release asset). Update marketplace issue 10184 to the final reviewed source. No publication or marketplace update is performed by this preparation PR.
+
+## rc.2 additional acceptance
+
+Test border dragging (edges/corners, tiled and floating, scaled monitors), mode
+switches with already open windows, ignored fullscreen/pinned/grouped/minimised
+windows, and a window closing mid-switch. Verify reported partial failures and
+retry. Reset removes future-window overrides without moving existing windows.
+Test Command copy/paste/cut/select-all/undo/redo in a GUI editor and browser;
+Kitty, Alacritty, Foot, WezTerm and Ghostty copy/paste must use Ctrl+Shift+C/V.
+Terminal undo/cut aliases must not emit Ctrl+Z/Ctrl+X. Verify unrelated Super
+shortcuts, reset, edited-file refusal, failed reload recovery and uninstall.

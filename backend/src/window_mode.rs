@@ -39,8 +39,14 @@ impl Paths {
 }
 
 pub fn hook(mode: &str, manifest: &Path) -> Result<String> {
-    if mode != "floating" {
-        return Err("Choose floating or reset".into());
+    if !["floating", "tiling"].contains(&mode) {
+        return Err("Choose floating, tiling or reset".into());
+    }
+    if mode == "tiling" {
+        return Ok(hook("floating", manifest)?
+            .replace("-- mode: floating", "-- mode: tiling")
+            .replace("familiar-new-windows-floating", "familiar-new-windows-tiling")
+            .replace("float = true", "float = false"));
     }
     Ok(format!(
         "{BEGIN}-- mode: floating\ndo\n  local plugin = io.open({}, 'r')\n  if plugin then\n    plugin:close()\n    hl.window_rule({{ name = 'familiar-new-windows-floating', match = {{ class = '.*' }}, float = true }})\n  end\nend\n{END}",
@@ -64,7 +70,7 @@ fn generated_content(paths: &Paths) -> Result<Option<String>> {
         Err(e) => Err(e.to_string()),
         Ok(_) => {
             let value = text(&paths.generated)?;
-            if value != hook("floating", &paths.manifest)? {
+            if value != hook("floating", &paths.manifest)? && value != hook("tiling", &paths.manifest)? {
                 return Err("Familiar's separate window config was edited; no file changed".into());
             }
             Ok(Some(value))
@@ -125,12 +131,14 @@ pub fn split(text: &str, manifest: &Path) -> Result<(String, String)> {
         return Ok((text.into(), "reset".into()));
     }
     if starts == 1 && ends == 1 {
-        let block = hook("floating", manifest)?;
-        if let Some(start) = text.find(&block) {
-            return Ok((
-                format!("{}{}", &text[..start], &text[start + block.len()..]),
-                "floating".into(),
-            ));
+        for mode in ["floating", "tiling"] {
+            let block = hook(mode, manifest)?;
+            if let Some(start) = text.find(&block) {
+                return Ok((
+                    format!("{}{}", &text[..start], &text[start + block.len()..]),
+                    mode.into(),
+                ));
+            }
         }
     }
 
@@ -158,8 +166,8 @@ fn reload(hypr: &mut impl Hypr) -> Result<()> {
 }
 
 pub fn change(mode: &str, paths: &Paths, hypr: &mut impl Hypr) -> Result<Value> {
-    if !["floating", "reset", "status"].contains(&mode) {
-        return Err("Usage: familiar-desktop window-mode <floating|reset|status>".into());
+    if !["floating", "tiling", "reset", "status"].contains(&mode) {
+        return Err("Usage: familiar-desktop window-mode <floating|tiling|reset|status>".into());
     }
     let _lock = if mode == "status" {
         None
@@ -230,13 +238,68 @@ pub fn change(mode: &str, paths: &Paths, hypr: &mut impl Hypr) -> Result<Value> 
         restore_generated(paths, content, &None)?;
     }
     Ok(
-        json!({"state":"ok","mode":mode,"backup":backup,"message":if mode == "reset" { "New windows follow your Hyprland rules again. Existing windows are unchanged." } else { "New windows will float without splitting the tiled layout. Existing windows are unchanged." }}),
+        json!({"state":"ok","mode":mode,"backup":backup,"message":if mode == "reset" { "New windows follow your Hyprland rules again. Existing windows are unchanged." } else if mode == "tiling" { "New windows use Hyprland tiling. Existing windows are unchanged." } else { "New windows will float without splitting the tiled layout. Existing windows are unchanged." }}),
     )
 }
 
 pub fn execute(args: &[String]) -> Result<Value> {
+    if args.len() == 2 && args[0] == "switch" {
+        return switch(&args[1], &Paths::system()?, &mut common::SystemHypr);
+    }
     if args.len() != 1 {
-        return Err("Usage: familiar-desktop window-mode <floating|reset|status>".into());
+        return Err("Usage: familiar-desktop window-mode <floating|tiling|reset|status>".into());
     }
     change(&args[0], &Paths::system()?, &mut common::SystemHypr)
+}
+
+// Idempotent mode switching across regular workspaces. Hidden, pinned, grouped
+// and fullscreen windows stay untouched. Each Lua action rechecks live identity.
+pub fn switch(mode: &str, paths: &Paths, hypr: &mut impl Hypr) -> Result<Value> {
+    if !["floating", "tiling"].contains(&mode) {
+        return Err("Choose floating or tiling".into());
+    }
+    let windows: Vec<Value> = serde_json::from_str(&hypr.command(&["-j", "clients"])?)
+        .map_err(|_| "Cannot read existing windows; nothing changed")?;
+    if windows.len() > 512 {
+        return Err("Too many windows to switch safely; nothing changed".into());
+    }
+    let mut result = change(mode, paths, hypr)?;
+    let mut changed = 0;
+    let mut skipped = 0;
+    let mut failed = 0;
+    for w in windows {
+        let addr = w["address"].as_str().unwrap_or("");
+        let pid = w["pid"].as_u64().unwrap_or(0);
+        if !crate::dock::valid_address(addr)
+            || pid <= 1
+            || w["mapped"] != true
+            || w["hidden"] == true
+            || w["pinned"] == true
+            || w["workspace"]["id"].as_i64().unwrap_or(-1) <= 0
+            || w["fullscreen"].as_u64().unwrap_or(0) != 0
+            || w["grouped"].as_array().is_some_and(|g| !g.is_empty())
+        {
+            skipped += 1;
+            continue;
+        }
+        let selector = common::lua(&format!("address:{addr}"));
+        let class = common::lua(w["initialClass"].as_str().unwrap_or(""));
+        let action = if mode == "floating" { "set" } else { "unset" };
+        let script = format!(
+            "local w=hl.get_window({selector}); assert(w and w.pid=={pid} and w.initial_class=={class} and w.mapped and not w.hidden and not w.pinned and w.fullscreen==0 and not w.group and w.workspace and w.workspace.id>0, 'Window changed; retry mode switch'); local r=hl.dsp.window.float({{window={selector},action='{action}'}})(); assert(not r or r.ok~=false, 'Window mode action failed')"
+        );
+        if checked(hypr, &["eval", &script]).is_ok() {
+            changed += 1;
+        } else {
+            failed += 1;
+        }
+    }
+    result["changed"] = json!(changed);
+    result["skipped"] = json!(skipped);
+    result["failed"] = json!(failed);
+    result["message"] = json!(format!(
+        "{mode} mode: {changed} windows updated, {skipped} protected windows skipped, {failed} failed. New windows use this mode.{}",
+        if failed > 0 { " Retry this mode to finish; already updated windows are retained." } else { "" }
+    ));
+    Ok(result)
 }

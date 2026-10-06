@@ -87,3 +87,14 @@ Run the installed `bin/familiar-desktop gestures reset` or choose Input → Trac
 `~/.local/state/omarchy/familiar-gestures` (respecting XDG overrides). Edited hooks,
 symlinks and failed reloads are refused or rolled back. Uninstall resets gestures
 before removing the plugin; disabling the shell plugin alone retains preferences.
+
+## Mouse resizing and Command shortcuts (rc.2)
+
+Use configuration in each setting, or run the installed helper with
+`input-preference resize reset` / `input-preference command reset`.
+Owned files live in `~/.config/omarchy/familiar-input/{resize,command}.lua`;
+backups use `~/.local/state/omarchy/familiar-{resize,command}` with XDG overrides.
+Reset reloads the original config, restoring its border settings and the listed
+Super bindings. Uninstall performs both resets and refuses edited owned content.
+The Floating/Tiling switch changes eligible existing windows. Use configuration
+only removes its future-window override; it does not reconstruct old geometry.

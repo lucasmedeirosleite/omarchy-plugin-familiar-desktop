@@ -15,11 +15,17 @@ struct FakeHypr {
     config_error: bool,
     fail_probe: bool,
     config_errors_json: Option<String>,
+    windows: Vec<serde_json::Value>,
+    fail_window: bool,
 }
 impl Hypr for FakeHypr {
     fn command(&mut self, args: &[&str]) -> Result<String> {
         self.calls
             .push(args.iter().map(|s| s.to_string()).collect());
+        if args == ["-j", "clients"] { return Ok(serde_json::to_string(&self.windows).unwrap()); }
+        if args.first() == Some(&"eval") && args.get(1).is_some_and(|s| s.contains("local w=")) && self.fail_window {
+            return Err("Window closed".into());
+        }
         if args == ["reload"] && self.fail_reload {
             self.fail_reload = false;
             return Err("fixture reload failure".into());
@@ -77,7 +83,7 @@ fn choices_persist_preserve_personal_content_and_reset_exactly() {
     let input = p.config.with_file_name("input.lua");
     fs::write(&input, "-- custom UK keyboard and AltGr").unwrap();
     let mut h = FakeHypr::default();
-    for mode in ["floating", "floating", "floating", "floating"] {
+    for mode in ["floating", "tiling", "floating", "tiling"] {
         let result = window_mode::change(mode, &p, &mut h).unwrap();
         assert_eq!(result["mode"], mode);
         let current = fs::read_to_string(&p.config).unwrap();
@@ -236,4 +242,26 @@ assert(calls == 1)
             .unwrap()
             .success()
     );
+}
+
+#[test]
+fn switch_changes_existing_windows_and_skips_protected_windows() {
+    let (_dir,p)=fixture();
+    let normal=serde_json::json!({"address":"0xABC","pid":42,"initialClass":"kitty","mapped":true,"workspace":{"id":2},"fullscreen":0});
+    let mut h=FakeHypr {windows:vec![normal.clone()], ..Default::default()};
+    for field in ["hidden","pinned"] {
+        let mut protected=normal.clone(); protected[field]=serde_json::json!(true); h.windows.push(protected);
+    }
+    let mut special=normal.clone();special["workspace"]["id"]=serde_json::json!(-99);h.windows.push(special);
+    let mut fullscreen=normal.clone();fullscreen["fullscreen"]=serde_json::json!(2);h.windows.push(fullscreen);
+    let mut grouped=normal.clone();grouped["grouped"]=serde_json::json!(["0xABC","0xDEF"]);h.windows.push(grouped);
+    for mode in ["floating","tiling"] {
+        let r=window_mode::switch(mode,&p,&mut h).unwrap();
+        assert_eq!(r["changed"],1);assert_eq!(r["skipped"],5);assert_eq!(r["failed"],0);
+    }
+    assert!(h.calls.iter().any(|c|c.iter().any(|s|s.contains("w.pid==42") && s.contains("action='unset'") && s.contains("w.initial_class"))));
+    h.fail_window=true;
+    let r=window_mode::switch("tiling",&p,&mut h).unwrap();
+    assert_eq!(r["failed"],1);
+    assert!(r["message"].as_str().unwrap().contains("Retry"));
 }

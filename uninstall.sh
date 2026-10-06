@@ -18,6 +18,8 @@ trap 'echo "Familiar removal stopped. The plugin has not been intentionally dele
 "$helper" desktop prepare-remove
 omarchy plugin disable "$plugin_id"
 "$helper" caps-lock reset
+"$helper" input-preference command reset
+"$helper" input-preference resize reset
 "$helper" gestures reset
 "$helper" window-mode reset
 "$helper" titlebars remove

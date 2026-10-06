@@ -18,7 +18,7 @@ TestCase {
         verify(item.run("floating"))
         verify(!item.run("floating"))
         compare(item.mode, "reset") // no optimistic success before the backend responds
-        compare(adapter.command.slice(1), ["window-mode", "floating"])
+        compare(adapter.command.slice(1), ["window-mode", "switch", "floating"])
         adapter.complete('{"state":"ok","mode":"floating","message":"Applied"}', 0)
         compare(item.mode, "floating")
     }

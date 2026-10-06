@@ -51,6 +51,8 @@ BarWidget {
   onSettingsOpenChanged: {
     if (settingsOpen && desktopService) {
       if (desktopService.capsLock) desktopService.capsLock.run("status")
+      if (desktopService.borderResize) desktopService.borderResize.run("status")
+      if (desktopService.commandShortcuts) desktopService.commandShortcuts.run("status")
       if (desktopService.gestures) desktopService.gestures.run("status")
       if (desktopService.windowMode) desktopService.windowMode.run("status")
     }
@@ -482,6 +484,15 @@ BarWidget {
           }
         }
 
+        InputPreferenceSettings {
+          visible: settingsWindow.page === "windows"
+          Layout.fillWidth: true
+          controller: root.desktopService ? root.desktopService.borderResize : null
+          title: "Resize with the mouse"
+          explanation: "Drag a window edge or corner to resize, without holding a modifier key. Adds a 15-pixel grab area and resize cursor. Tiled resizing follows your Hyprland layout; floating windows resize freely. Use configuration restores your original settings."
+          enableLabel: "Enable border dragging"
+        }
+
         WindowModeSettings {
           visible: settingsWindow.page === "windows"
           Layout.fillWidth: true
@@ -517,6 +528,15 @@ BarWidget {
             font.pixelSize: 12
             color: Color.popups.text
           }
+        }
+
+        InputPreferenceSettings {
+          visible: settingsWindow.page === "keyboard"
+          Layout.fillWidth: true
+          controller: root.desktopService ? root.desktopService.commandShortcuts : null
+          title: "Command editing shortcuts"
+          explanation: "Opt-in: replaces Super+C/V/X/A/Z and Super+Shift+Z with copy, paste, cut, select all, undo and redo. Other desktop shortcuts stay as configured. Known terminals (including Kitty, Alacritty, Foot, WezTerm and Ghostty) use Ctrl+Shift+C/V; other editing aliases pass through there. Custom terminal classes may need support before enabling. This changes behaviour independently of the label preference. Use configuration restores the original bindings."
+          enableLabel: "Enable Command editing shortcuts"
         }
 
         GesturesSettings {
