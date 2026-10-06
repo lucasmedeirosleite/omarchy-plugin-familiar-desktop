@@ -10,6 +10,7 @@ import qs.Commons
 import qs.Ui
 import "DockModel.js" as DockModel
 import "DockSettings.js" as DockSettings
+import "ShortcutLabels.js" as ShortcutLabels
 import "DockCommands.js" as DockCommands
 import "components"
 
@@ -264,6 +265,8 @@ Item {
     CapsLockController { id: capsLockController }
     readonly property var windowMode: windowModeController
     WindowModeController { id: windowModeController }
+    readonly property var gestures: gesturesController
+    GesturesController { id: gesturesController }
 
     readonly property var desktopTools: desktopToolsAdapter
     DesktopActions { id: desktopToolsAdapter; onCompleted: function(operation) { root.updateDockItems(); minimizeRefreshTimer.restart() } }
@@ -450,6 +453,7 @@ Item {
         fontSize: Math.max(8, Math.min(32, Style.font.subtitle))
     }
     property string profile: "general"
+    property string shortcutLabels: "standard"
     property bool dockEnabled: true
     property string visibilityMode: "always"
     property string preferredVisibilityMode: "hover"
@@ -1027,6 +1031,7 @@ Item {
                 root.fileShortcutsEnabled = s.fileShortcutsEnabled === true
                 var normalized = DockSettings.normalize(s)
                 root.profile = normalized.profile
+                root.shortcutLabels = ShortcutLabels.normalize(s.shortcutLabels)
                 root.dockPosition = normalized.dockPosition
                 root.dockSize = normalized.dockSize
                 root.titlebarSize = normalized.titlebarSize
@@ -1089,6 +1094,7 @@ Item {
         saveSettingsTimer.restart()
         var jsonStr = JSON.stringify({
             profile: root.profile,
+            shortcutLabels: root.shortcutLabels,
             dockPosition: root.dockPosition,
             dockSize: root.dockSize,
             titlebarSize: root.titlebarSize,

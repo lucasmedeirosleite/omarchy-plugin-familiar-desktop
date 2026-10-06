@@ -1,4 +1,4 @@
-use familiar_desktop::{caps_lock, common, desktop, dock, titlebars, window_mode};
+use familiar_desktop::{caps_lock, common, desktop, dock, gestures, titlebars, window_mode};
 use serde_json::json;
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -7,6 +7,7 @@ fn main() {
         return;
     }
     let result=match args.first().map(String::as_str) {
+        Some("gestures")=>gestures::execute(&args[1..]),
         Some("window-mode")=>window_mode::execute(&args[1..]),
         Some("caps-lock")=>caps_lock::execute(&args[1..]),
         Some("desktop")=>desktop::execute(&args[1..]),

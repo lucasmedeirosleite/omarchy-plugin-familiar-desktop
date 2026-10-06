@@ -66,3 +66,22 @@ Settings, pins, badges and recovery journal are retained. Companion apps and unr
 ## Clean rollback acceptance
 
 Complete [ROLLBACK.md](ROLLBACK.md) before release: separate Caps Lock file, byte-preserving fresh title-bar install/remove, preservation of subsequent personal edits, edited-hook refusal, failed reload stopping deletion, and actual Hyprbars unload. Generic plugin deletion is not this cleanup path.
+
+## Input follow-up after rc.1
+
+- Change Input → shortcut labels, reopen settings and refresh the shell. Verify
+  Command/Option/Control persist, both “Super” and “Command” find the same shortcut,
+  and actual keybindings and copied Lua are unchanged.
+- Select workspace, desktop and combined gestures explicitly. Test three fingers
+  left/right and four down/up, including fullscreen clients and multiple monitors.
+  Check that a deliberate existing gesture conflict causes rollback and no config
+  error remains; desktop-only must work when workspace gestures are already owned.
+- Use configuration, disable/re-enable, and uninstall. Verify personal config is
+  preserved and owned preferences are removed on reset/uninstall. As with the
+  keyboard/window preferences, disabling the shell plugin alone does not remove
+  a compositor preference; reset it first if you want it off.
+- Two-finger tap a dock item with system tap-to-click configured; it must open the
+  named-window menu. Smooth scroll an app with multiple windows and check motion
+  threshold, both axes, direction reversal and ordinary mouse-wheel behaviour.
+
+These are live acceptance checks, not claimed results from portable fixtures.

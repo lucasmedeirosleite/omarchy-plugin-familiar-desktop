@@ -18,6 +18,7 @@ trap 'echo "Familiar removal stopped. The plugin has not been intentionally dele
 "$helper" desktop prepare-remove
 omarchy plugin disable "$plugin_id"
 "$helper" caps-lock reset
+"$helper" gestures reset
 "$helper" window-mode reset
 "$helper" titlebars remove
 # Only delete the plugin after owned hooks are removed and reload is verified.

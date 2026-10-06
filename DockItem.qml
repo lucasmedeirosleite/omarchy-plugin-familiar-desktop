@@ -6,11 +6,14 @@ import Quickshell.Hyprland
 import qs.Commons
 import qs.Ui
 import "DockModel.js" as DockModel
+import "DockScroll.js" as DockScroll
 import "components"
 
 Item {
     id: root
 
+    property real pendingScroll: 0
+    Timer { id: scrollReset; interval: 180; onTriggered: root.pendingScroll = 0 }
     property var itemData: null
     property int itemIndex: 0
     property int totalCount: 1
@@ -701,13 +704,13 @@ Item {
 
         onWheel: function(wheel) {
             if (root.itemData && !root.itemData.isStack && root.itemData.isRunning && root.itemData.toplevels && root.itemData.toplevels.length >= 2) {
-                if (wheel.angleDelta.y < 0 || wheel.angleDelta.x > 0) {
-                    root.cycleDuplicate(true)
-                    wheel.accepted = true
-                } else if (wheel.angleDelta.y > 0 || wheel.angleDelta.x < 0) {
-                    root.cycleDuplicate(false)
-                    wheel.accepted = true
-                }
+                var result = DockScroll.step(root.pendingScroll, wheel.pixelDelta.x, wheel.pixelDelta.y, wheel.angleDelta.x, wheel.angleDelta.y)
+                root.pendingScroll = result.pending
+                scrollReset.restart()
+                if (result.direction !== 0) root.cycleDuplicate(result.direction > 0)
+                wheel.accepted = true
+            } else {
+                wheel.accepted = false
             }
         }
 

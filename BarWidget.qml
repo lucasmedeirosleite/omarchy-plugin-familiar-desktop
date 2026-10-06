@@ -9,6 +9,7 @@ import qs.Ui
 import "DockSettings.js" as DockSettings
 import "DockWidgets.js" as DockWidgets
 import "DockCommands.js" as DockCommands
+import "ShortcutLabels.js" as ShortcutLabels
 import "components"
 
 BarWidget {
@@ -18,6 +19,7 @@ BarWidget {
   property string settingsPath: Quickshell.env("HOME") + "/.config/omarchy/familiar-desktop-settings.json"
   property var shell: root.bar ? root.bar.shell : null
   property string profile: "general"
+  property string shortcutLabels: "standard"
   property bool fileShortcutsEnabled: false
   property bool dockEnabled: true
   property string dockSize: "default"
@@ -49,6 +51,7 @@ BarWidget {
   onSettingsOpenChanged: {
     if (settingsOpen && desktopService) {
       if (desktopService.capsLock) desktopService.capsLock.run("status")
+      if (desktopService.gestures) desktopService.gestures.run("status")
       if (desktopService.windowMode) desktopService.windowMode.run("status")
     }
   }
@@ -94,6 +97,7 @@ BarWidget {
         root.fileShortcutsEnabled = s.fileShortcutsEnabled === true
         var normalized = DockSettings.normalize(s)
         root.profile = normalized.profile
+        root.shortcutLabels = ShortcutLabels.normalize(s.shortcutLabels)
         root.dockPosition = normalized.dockPosition
         root.dockSize = normalized.dockSize
         root.titlebarSize = normalized.titlebarSize
@@ -153,6 +157,7 @@ BarWidget {
 
     s.dockEnabled = root.dockEnabled
     s.profile = root.profile
+    s.shortcutLabels = root.shortcutLabels
     s.dockPosition = root.dockPosition
     s.dockSize = root.dockSize
     s.titlebarSize = root.titlebarSize
@@ -445,6 +450,7 @@ BarWidget {
           visible: settingsWindow.page === "help"
           Layout.fillWidth: true
           tools: root.desktopTools
+          labelStyle: root.shortcutLabels
         }
         Repeater {
           model: [{key: "dockSize", label: "Dock and icons"}, {key: "titlebarSize", label: "Title bars and buttons"}]
@@ -480,6 +486,43 @@ BarWidget {
           visible: settingsWindow.page === "windows"
           Layout.fillWidth: true
           controller: root.desktopService ? root.desktopService.windowMode : null
+          labelStyle: root.shortcutLabels
+        }
+
+        ColumnLayout {
+          visible: settingsWindow.page === "keyboard"
+          Layout.fillWidth: true
+          Text {
+            text: "Shortcut labels"
+            textFormat: Text.PlainText
+            font.family: Style.font.family
+            color: Color.popups.text
+          }
+          Repeater {
+            model: [{key: "standard", label: "Super / Alt / Ctrl"}, {key: "mac", label: "Command / Option / Control"}]
+            delegate: ActionButton {
+              required property var modelData
+              Layout.fillWidth: true
+              text: modelData.label
+              selected: root.shortcutLabels === modelData.key
+              onClicked: { root.shortcutLabels = modelData.key; root.saveSettings() }
+            }
+          }
+          Text {
+            Layout.fillWidth: true
+            text: "Changes the names shown in Familiar. Your keybindings and copyable configuration stay the same."
+            textFormat: Text.PlainText
+            wrapMode: Text.WordWrap
+            font.family: Style.font.family
+            font.pixelSize: 12
+            color: Color.popups.text
+          }
+        }
+
+        GesturesSettings {
+          visible: settingsWindow.page === "keyboard"
+          Layout.fillWidth: true
+          controller: root.desktopService ? root.desktopService.gestures : null
         }
 
         CapsLockSettings {

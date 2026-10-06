@@ -13,3 +13,6 @@ node tests/test_candidate_install.cjs
 node tests/test_release_tag.cjs
 
 node tests/test_repair.cjs
+
+node tests/test_shortcut_labels.cjs
+node tests/test_dock_scroll.cjs

@@ -15,7 +15,7 @@ Rectangle {
         {key: "general", title: "General", glyph: "▦", detail: "Your starting layout and desktop actions."},
         {key: "dock", title: "Dock", glyph: "▤", detail: "Apps, visibility and the way your dock behaves."},
         {key: "windows", title: "Windows", glyph: "□", detail: "Title bars, button placement and sizing."},
-        {key: "keyboard", title: "Keyboard", glyph: "⌨", detail: "Choose what your Caps Lock key does."},
+        {key: "keyboard", title: "Input", glyph: "⌨", detail: "Keyboard labels, Caps Lock and trackpad gestures."},
         {key: "help", title: "Getting Started", glyph: "?", detail: "Your shortcuts and useful system tools."}
     ]
     readonly property var current: pages.filter(p => p.key === page)[0] || pages[0]

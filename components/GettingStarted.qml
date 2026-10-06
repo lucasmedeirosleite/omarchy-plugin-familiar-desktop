@@ -1,10 +1,12 @@
 import QtQuick
 import QtQuick.Layouts
 import qs.Commons
+import "../ShortcutLabels.js" as ShortcutLabels
 
 ColumnLayout {
     id: root
     property var tools: null
+    property string labelStyle: "standard"
     spacing: 8
     Text {
         Layout.fillWidth: true
@@ -28,7 +30,7 @@ ColumnLayout {
     }
     Text {
         Layout.fillWidth: true
-        text: "Super is the Windows or Command key. These shortcuts come from your running Hyprland configuration; Familiar does not replace your bindings."
+        text: (root.labelStyle === "mac" ? "Command is Super, Option is Alt, and Control is Ctrl. " : "Super is the Windows or Command key. ") + "These shortcuts come from your running Hyprland configuration; Familiar does not replace your bindings."
         textFormat: Text.PlainText
         wrapMode: Text.WordWrap
         font.family: Style.font.family
@@ -57,8 +59,8 @@ ColumnLayout {
         delegate: Text {
             required property var modelData
             Layout.fillWidth: true
-            visible: !filter.text || (modelData.keys + " " + modelData.description).toLowerCase().indexOf(filter.text.toLowerCase()) >= 0
-            text: modelData.keys + " — " + modelData.description + (modelData.submap ? " [" + modelData.submap + "]" : "")
+            visible: !filter.text || ShortcutLabels.matches(modelData.keys, modelData.description, filter.text, root.labelStyle)
+            text: ShortcutLabels.format(modelData.keys, root.labelStyle) + " — " + modelData.description + (modelData.submap ? " [" + modelData.submap + "]" : "")
             textFormat: Text.PlainText
             wrapMode: Text.WordWrap
             font.family: Style.font.family

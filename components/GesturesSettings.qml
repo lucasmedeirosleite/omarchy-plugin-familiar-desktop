@@ -2,16 +2,14 @@ import QtQuick
 import QtQuick.Layouts
 import qs.Commons
 import qs.Ui
-import "../ShortcutLabels.js" as ShortcutLabels
 
 ColumnLayout {
     id: root
     property var controller: null
-    property string labelStyle: "standard"
     spacing: 6
     Text {
         Layout.fillWidth: true
-        text: "New window layout"
+        text: "Trackpad gestures"
         textFormat: Text.PlainText
         font.family: Style.font.family
         font.pixelSize: 13
@@ -19,7 +17,9 @@ ColumnLayout {
     }
     Repeater {
         model: [
-            {key: "floating", label: "Floating · keep existing tiles the same size"},
+            {key: "all", label: "Workspace and desktop swipes"},
+            {key: "workspace", label: "Workspace swipes only"},
+            {key: "desktop", label: "Desktop swipes only"},
             {key: "reset", label: "Use configuration"}
         ]
         delegate: ActionButton {
@@ -33,7 +33,7 @@ ColumnLayout {
     }
     Text {
         Layout.fillWidth: true
-        text: "Opt-in for all newly opened app windows, including " + ShortcutLabels.format("Super + Enter", root.labelStyle) + " terminals. Windows overlap instead of splitting tiles. Existing windows are unchanged. Use configuration removes this preference; use the dock’s Return to tiling action for existing windows."
+        text: "Three fingers left/right switch workspaces. Four fingers down shows the desktop; four fingers up restores windows. Opt-in: detected conflicts restore your previous configuration. Use configuration removes Familiar’s gestures. Two-finger tap uses your system’s right-click setting; scrolling over a running app cycles its windows."
         textFormat: Text.PlainText
         wrapMode: Text.WordWrap
         font.family: Style.font.family
@@ -52,7 +52,7 @@ ColumnLayout {
     }
     ActionButton {
         Layout.fillWidth: true
-        text: "Refresh window preference"
+        text: "Refresh gesture preference"
         enabled: !!root.controller && !root.controller.busy
         onClicked: root.controller.run("status")
     }
