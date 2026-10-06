@@ -1,9 +1,4 @@
-use familiar_desktop::{
-    Result,
-    common::Hypr,
-    window_mode::Paths,
-    input_preferences,
-};
+use familiar_desktop::{Result, common::Hypr, input_preferences, window_mode::Paths};
 use std::{
     fs,
     os::unix::fs::{PermissionsExt, symlink},
@@ -56,25 +51,36 @@ fn fixture() -> (tempfile::TempDir, Paths) {
     (dir, paths)
 }
 
-
 #[test]
 fn preferences_preserve_personal_config_and_reset_exactly() {
     for kind in ["resize", "command"] {
         let (_dir, p) = fixture();
         let before = fs::read_to_string(&p.config).unwrap();
         let mut h = FakeHypr::default();
-        assert_eq!(input_preferences::change(kind, "status", &p, &mut h).unwrap()["mode"], "reset");
+        assert_eq!(
+            input_preferences::change(kind, "status", &p, &mut h).unwrap()["mode"],
+            "reset"
+        );
         assert!(h.calls.is_empty());
         input_preferences::change(kind, "enable", &p, &mut h).unwrap();
         input_preferences::change(kind, "enable", &p, &mut h).unwrap();
-        assert_eq!(input_preferences::change(kind, "status", &p, &mut h).unwrap()["mode"], "enable");
+        assert_eq!(
+            input_preferences::change(kind, "status", &p, &mut h).unwrap()["mode"],
+            "enable"
+        );
         let mut content = fs::read_to_string(&p.config).unwrap();
         content.push_str("-- later personal edit\n");
         fs::write(&p.config, content).unwrap();
         input_preferences::change(kind, "reset", &p, &mut h).unwrap();
-        assert_eq!(fs::read_to_string(&p.config).unwrap(), format!("{before}-- later personal edit\n"));
+        assert_eq!(
+            fs::read_to_string(&p.config).unwrap(),
+            format!("{before}-- later personal edit\n")
+        );
         assert!(!p.generated.exists());
-        assert_eq!(fs::metadata(&p.config).unwrap().permissions().mode() & 0o777, 0o640);
+        assert_eq!(
+            fs::metadata(&p.config).unwrap().permissions().mode() & 0o777,
+            0o640
+        );
     }
 }
 
@@ -84,40 +90,49 @@ fn first_enable_failure_rolls_back_and_edits_are_never_overwritten() {
         for config_error in [false, true] {
             let (_dir, p) = fixture();
             let before = fs::read(&p.config).unwrap();
-            let mut h = FakeHypr {fail_reload: !config_error, config_error, ..Default::default()};
-            assert!(input_preferences::change(kind,"enable",&p,&mut h).is_err());
-            assert_eq!(fs::read(&p.config).unwrap(),before);
+            let mut h = FakeHypr {
+                fail_reload: !config_error,
+                config_error,
+                ..Default::default()
+            };
+            assert!(input_preferences::change(kind, "enable", &p, &mut h).is_err());
+            assert_eq!(fs::read(&p.config).unwrap(), before);
             assert!(!p.generated.exists());
         }
-        let (_dir,p)=fixture();
-        let mut h=FakeHypr::default();
-        input_preferences::change(kind,"enable",&p,&mut h).unwrap();
-        fs::write(&p.generated,"-- owner edit").unwrap();
-        let before=fs::read(&p.config).unwrap();
-        assert!(input_preferences::change(kind,"reset",&p,&mut h).is_err());
-        assert_eq!(fs::read(&p.config).unwrap(),before);
-        assert_eq!(fs::read_to_string(&p.generated).unwrap(),"-- owner edit");
+        let (_dir, p) = fixture();
+        let mut h = FakeHypr::default();
+        input_preferences::change(kind, "enable", &p, &mut h).unwrap();
+        fs::write(&p.generated, "-- owner edit").unwrap();
+        let before = fs::read(&p.config).unwrap();
+        assert!(input_preferences::change(kind, "reset", &p, &mut h).is_err());
+        assert_eq!(fs::read(&p.config).unwrap(), before);
+        assert_eq!(fs::read_to_string(&p.generated).unwrap(), "-- owner edit");
     }
 }
 
 #[test]
 fn invalid_kind_and_symlink_refuse_without_reload() {
-    let (_dir,p)=fixture();
-    let mut h=FakeHypr::default();
-    assert!(input_preferences::change("bad","enable",&p,&mut h).is_err());
+    let (_dir, p) = fixture();
+    let mut h = FakeHypr::default();
+    assert!(input_preferences::change("bad", "enable", &p, &mut h).is_err());
     fs::remove_file(&p.config).unwrap();
-    symlink("missing",&p.config).unwrap();
-    assert!(input_preferences::change("resize","enable",&p,&mut h).is_err());
+    symlink("missing", &p.config).unwrap();
+    assert!(input_preferences::change("resize", "enable", &p, &mut h).is_err());
     assert!(h.calls.is_empty());
 }
 
 #[test]
 fn command_shortcuts_target_active_window_and_do_not_interrupt_known_terminals() {
-    let (dir,p)=fixture();
-    let hook=dir.path().join("shortcuts.lua");
-    fs::write(&hook,input_preferences::hook("command",&p.manifest).unwrap()).unwrap();
-    let harness=dir.path().join("test.lua");
-    let script=format!(r#"
+    let (dir, p) = fixture();
+    let hook = dir.path().join("shortcuts.lua");
+    fs::write(
+        &hook,
+        input_preferences::hook("command", &p.manifest).unwrap(),
+    )
+    .unwrap();
+    let harness = dir.path().join("test.lua");
+    let script = format!(
+        r#"
 local bindings, removed, sent = {{}}, {{}}, {{}}
 local active = {{ initial_class='firefox', address='0xA' }}
 hl = {{
@@ -144,7 +159,15 @@ bindings['SUPER + C']()
 assert(#sent==4)
 assert(removed['SUPER + C'] and not removed['SUPER + Return'])
 assert(not bindings['SUPER + Return'])
-"#,familiar_desktop::common::lua(&hook.to_string_lossy()));
-    fs::write(&harness,script).unwrap();
-    assert!(std::process::Command::new("lua").arg(harness).status().unwrap().success());
+"#,
+        familiar_desktop::common::lua(&hook.to_string_lossy())
+    );
+    fs::write(&harness, script).unwrap();
+    assert!(
+        std::process::Command::new("lua")
+            .arg(harness)
+            .status()
+            .unwrap()
+            .success()
+    );
 }

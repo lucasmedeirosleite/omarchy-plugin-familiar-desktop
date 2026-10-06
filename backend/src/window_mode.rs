@@ -45,7 +45,10 @@ pub fn hook(mode: &str, manifest: &Path) -> Result<String> {
     if mode == "tiling" {
         return Ok(hook("floating", manifest)?
             .replace("-- mode: floating", "-- mode: tiling")
-            .replace("familiar-new-windows-floating", "familiar-new-windows-tiling")
+            .replace(
+                "familiar-new-windows-floating",
+                "familiar-new-windows-tiling",
+            )
             .replace("float = true", "float = false"));
     }
     Ok(format!(
@@ -70,7 +73,9 @@ fn generated_content(paths: &Paths) -> Result<Option<String>> {
         Err(e) => Err(e.to_string()),
         Ok(_) => {
             let value = text(&paths.generated)?;
-            if value != hook("floating", &paths.manifest)? && value != hook("tiling", &paths.manifest)? {
+            if value != hook("floating", &paths.manifest)?
+                && value != hook("tiling", &paths.manifest)?
+            {
                 return Err("Familiar's separate window config was edited; no file changed".into());
             }
             Ok(Some(value))
@@ -299,7 +304,11 @@ pub fn switch(mode: &str, paths: &Paths, hypr: &mut impl Hypr) -> Result<Value> 
     result["failed"] = json!(failed);
     result["message"] = json!(format!(
         "{mode} mode: {changed} windows updated, {skipped} protected windows skipped, {failed} failed. New windows use this mode.{}",
-        if failed > 0 { " Retry this mode to finish; already updated windows are retained." } else { "" }
+        if failed > 0 {
+            " Retry this mode to finish; already updated windows are retained."
+        } else {
+            ""
+        }
     ));
     Ok(result)
 }
