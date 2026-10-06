@@ -634,9 +634,7 @@ BarWidget {
               onClicked: {
                 if (root.desktopService && root.desktopService.setup) {
                   root.close()
-                  root.desktopService.setup.state = "needed"
-                  root.desktopService.setup.style = root.titlebarStyle
-                  root.desktopService.setup.show()
+                  root.desktopService.setup.repair(root.titlebarStyle)
                 }
               }
             }

@@ -14,6 +14,7 @@ Rectangle {
     border.color: Color.popups.border
     border.width: 1
     property bool showDetails: false
+    MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons }
 
     ColumnLayout {
         id: content

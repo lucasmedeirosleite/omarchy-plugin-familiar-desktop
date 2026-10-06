@@ -43,7 +43,8 @@ for tool in curl git hyprctl; do
 done
 installed="$HOME/.config/omarchy/plugins/io.github.tcballard.familiar-desktop"
 [[ -d "$installed/.git" && ! -L "$installed" && "$(cd "$installed" && pwd -P)" == "$root" ]] || { echo 'Setup must run from the installed Familiar plugin.'; exit 1; }
-[[ -z "$(git -C "$root" status --porcelain --untracked-files=normal)" ]] || { echo 'The installed plugin has local changes. Restore the reviewed source before setup.'; exit 1; }
+source_status="$(git -C "$root" status --porcelain --untracked-files=normal)" || { echo 'Could not inspect the installed source. Retry after restoring the Git checkout.'; exit 1; }
+[[ -z "$source_status" ]] || { echo 'The installed plugin has local changes. Restore the reviewed source before setup.'; exit 1; }
 log="$(mktemp "$state/setup-log.XXXXXX")"
 finish() {
   local code=$?

@@ -26,6 +26,14 @@ Item {
         adapter.running = true
     }
     function show() { opened = true }
+    function repair(selectedStyle) {
+        if (busy) { show(); return }
+        style = selectedStyle === "mac" ? "mac" : "windows"
+        state = "needed"
+        message = "Set up or repair your window controls."
+        details = ""
+        show()
+    }
     function start() {
         if (!active || busy || !canStart) return false
         operation = "install"
