@@ -18,6 +18,20 @@ done
 abi="$(hyprctl version | sed -n 's/^Version ABI string: //p')"
 [[ "$abi" == "$expected_abi" ]] || { printf 'Unsupported Hyprland ABI: %s\nExpected: %s\nNothing installed.\n' "$abi" "$expected_abi" >&2; exit 1; }
 (cd "$bundle_dir" && sha256sum --check --strict SHA256SUMS)
+# The bundle's own SHA256SUMS is transport integrity, not the trust anchor.
+# Fetch the reviewed snapshot independently before executing any bundle binary.
+verification_stage="$(mktemp -d)"
+trap 'rm -rf -- "$verification_stage"' EXIT
+git init "$verification_stage"
+git -C "$verification_stage" fetch --no-tags "$repository" "$candidate_sha"
+[[ "$(git -C "$verification_stage" rev-parse --verify 'FETCH_HEAD^{commit}')" == "$candidate_sha" ]] || exit 1
+git -C "$verification_stage" show "$candidate_sha:release-binaries.sha256" > "$verification_stage/pins"
+for asset in familiar-desktop-linux-x86_64 "hyprbars-linux-x86_64-$abi.so"; do
+  expected="$(awk -v name="$asset" '$2 == name {print $1}' "$verification_stage/pins")"
+  [[ "$expected" =~ ^[0-9a-f]{64}$ ]] || { echo 'Missing or ambiguous reviewed binary digest.' >&2; exit 1; }
+  actual="$(sha256sum "$bundle_dir/$asset" | cut -d " " -f1)"
+  [[ "$actual" == "$expected" ]] || { echo "Reviewed digest mismatch: $asset" >&2; exit 1; }
+done
 chmod u+x "$bundle_dir/familiar-desktop-linux-x86_64"
 [[ "$("$bundle_dir/familiar-desktop-linux-x86_64" --version)" == "familiar-desktop $candidate_version" ]] || { echo 'Candidate binary has the wrong version.' >&2; exit 1; }
 if [[ -L "$plugin_dir" || ( -e "$plugin_dir" && ! -d "$plugin_dir/.git" ) ]]; then
@@ -27,7 +41,7 @@ if [[ ! -d "$plugin_dir/.git" ]]; then
   # Register only an already verified detached checkout. Adding the remote URL
   # first would expose the moving default branch to the shell's plugin rescan.
   source_stage="$(mktemp -d)"
-  trap 'rm -rf -- "$source_stage"' EXIT
+  trap 'rm -rf -- "$source_stage" "$verification_stage"' EXIT
   git init "$source_stage"
   git -C "$source_stage" fetch --no-tags "$repository" "$candidate_sha"
   [[ "$(git -C "$source_stage" rev-parse --verify 'FETCH_HEAD^{commit}')" == "$candidate_sha" ]] || { echo 'Fetched source does not match the pinned commit.' >&2; exit 1; }

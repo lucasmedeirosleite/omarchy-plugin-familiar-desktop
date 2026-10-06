@@ -8,6 +8,7 @@ assert.ok(bootstrap.includes("release='v"+version+"'"));
 assert.ok(!bootstrap.includes('@SOURCE_SHA@'));
 const root=fs.mkdtempSync(path.join(os.tmpdir(),'familiar-release-'));
 try {
+ fs.copyFileSync('release-binaries.sha256',path.join(root,'release-binaries.sha256'));
  fs.copyFileSync('install-backend.sh',path.join(root,'install-backend.sh'));
  const tools=path.join(root,'tools');fs.mkdirSync(tools);
  fs.writeFileSync(path.join(tools,'curl'),'#!/bin/bash\nfor arg; do [[ "$arg" != https://* ]] || url="$arg"; done\ncp -- "$ASSETS/${url##*/}" "${@: -1}"\n',{mode:0o755});

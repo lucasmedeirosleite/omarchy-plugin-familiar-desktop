@@ -28,6 +28,16 @@ function run({existing=false, dirty=false, repair=false, failRepair=false, missi
   const hash=crypto.createHash('sha256').update(fs.readFileSync(asset)).digest('hex');
   fs.writeFileSync(path.join(root,'sums'),`${fault==='corrupt'?'0'.repeat(64):hash}  familiar-desktop-linux-x86_64\n`+(fault==='duplicate'?`${hash}  familiar-desktop-linux-x86_64\n`:''));
   fs.appendFileSync(path.join(root,'sums'),`${titlebarFault==='corrupt'?'0'.repeat(64):titlebarHash}  hyprbars-linux-x86_64-${abi}.so\n`);
+  fs.copyFileSync(path.join(root,'sums'),path.join(fixture,'release-binaries.sha256'));
+  // An attacker replaces both the release binary and its matching remote checksum.
+  if(fault==='substitution') {
+   fs.appendFileSync(asset,'echo attacker-executed >> "$LOG"\n');
+   fs.writeFileSync(path.join(root,'sums'),crypto.createHash('sha256').update(fs.readFileSync(asset)).digest('hex')+'  familiar-desktop-linux-x86_64\n');
+  }
+  if(titlebarFault==='substitution') {
+   fs.appendFileSync(titlebar,'substituted library');
+   fs.writeFileSync(path.join(root,'sums'),crypto.createHash('sha256').update(fs.readFileSync(titlebar)).digest('hex')+'  hyprbars-linux-x86_64-'+abi+'.so\n');
+  }
   if(existing)fs.cpSync(fixture,plugin,{recursive:true});
   if(lifecycle==='unmanaged') {fs.rmSync(path.join(plugin,'.git'),{recursive:true});}
   if(lifecycle)fs.writeFileSync(path.join(plugin,'bin/familiar-desktop'),`#!/bin/bash\necho "old-helper $*" >> "$LOG"\nif [[ "$1" == --version ]]; then echo 'familiar-desktop ${oldVersion}'; fi\nif [[ "$*" == 'desktop restore' && "$LIFECYCLE" == restore-failure ]]; then exit 1; fi\nif [[ "$*" == 'titlebars disable' && "$LIFECYCLE" == unload-failure ]]; then exit 1; fi\n`,{mode:0o755});
@@ -41,7 +51,7 @@ function run({existing=false, dirty=false, repair=false, failRepair=false, missi
  }finally{fs.rmSync(root,{recursive:true,force:true});}
 }
 for(const existing of [false,true]){
- const r=run({existing});assert.equal(r.status,0,r.stderr);assert.equal(r.log.includes('omarchy plugin add'),!existing);assert.ok(r.log.includes(`checkout --detach ${sourceSha}\n`));assert.doesNotMatch(r.log,/--install-dependency|cargo|rustup|clippy|forbidden-build|sudo/);assert.ok(r.log.indexOf('helper --version')<r.log.indexOf('omarchy plugin enable'));assert.deepEqual(r.staging,[]);passed++;
+ const r=run({existing});assert.equal(r.status,0,r.stderr);assert.equal(r.log.includes('omarchy plugin add'),!existing);assert.ok(r.log.includes(`checkout --detach ${sourceSha}\n`));assert.doesNotMatch(r.log,/--install-dependency|cargo|rustup|clippy|forbidden-build|sudo/);assert.ok(r.log.indexOf('helper --version')<r.log.indexOf('omarchy plugin enable'));assert.deepEqual(r.staging,[]);assert.doesNotMatch(r.log,/SHA256SUMS/);passed++;
 }
 let r=run({style:'windows'});assert.equal(r.status,0,r.stderr);assert.match(r.log,/setup --library .*hyprbars.so --enable --style windows/);passed++;
 r=run({existing:true,dirty:true});assert.notEqual(r.status,0);assert.doesNotMatch(r.log,/checkout|helper|plugin enable/);passed++;
@@ -51,15 +61,15 @@ r=run({missing:true});assert.notEqual(r.status,0);assert.doesNotMatch(r.log,/plu
 r=run({flaky:'reload'});assert.equal(r.status,0,r.stderr);assert.match(r.log,/omarchy-shell io.github.tcballard.familiar-desktop refreshTitlebars/);passed++;
 r=run({flaky:'always'});assert.notEqual(r.status,0);assert.match(r.stderr,/did not respond to 'refresh'/);passed++;
 r=run({style:'bogus'});assert.notEqual(r.status,0);assert.equal(r.log,'');passed++;
-for(const fault of ['download','corrupt','duplicate','version']){
- r=run({existing:true,fault});assert.notEqual(r.status,0);assert.equal(r.binary,'previous backend');assert.doesNotMatch(r.log,/setup|plugin enable|cargo|rustup|clippy|forbidden-build/);assert.deepEqual(r.staging,[]);if(fault==='corrupt')assert.doesNotMatch(r.log,/helper/);passed++;
+for(const fault of ['download','corrupt','duplicate','version','substitution']){
+ r=run({existing:true,fault});assert.notEqual(r.status,0);assert.equal(r.binary,'previous backend');assert.doesNotMatch(r.log,/setup|plugin enable|cargo|rustup|clippy|forbidden-build/);assert.deepEqual(r.staging,[]);if(fault==='corrupt'||fault==='substitution')assert.doesNotMatch(r.log,/helper/);passed++;
 }
 r=run({existing:true,arch:'aarch64'});assert.notEqual(r.status,0);assert.equal(r.binary,'previous backend');assert.match(r.stderr,/Linux x86_64/);assert.doesNotMatch(r.log,/curl|plugin enable/);passed++;
 // The settings repair action must use the release installer, never a source build.
 const widget=fs.readFileSync(path.resolve(__dirname,'../BarWidget.qml'),'utf8');assert.match(widget,/Qt.resolvedUrl\("repair.sh"\)/);assert.doesNotMatch(widget,/Qt.resolvedUrl\("build.sh"\)/);
 console.log(`${passed} installer scenarios passed (mock host; real SHA-256 verification).`);
 
-for(const options of [{badAbi:true},{titlebarFault:'corrupt'},{titlebarFault:'download'},{repair:true}]) {
+for(const options of [{badAbi:true},{titlebarFault:'corrupt'},{titlebarFault:'substitution'},{titlebarFault:'download'},{repair:true}]) {
  const result=run(options);assert.notEqual(result.status,0);
  assert.doesNotMatch(result.log,/hyprpm|cargo|rustup|clippy|sudo|plugin enable/);
  if(!options.repair)assert.doesNotMatch(result.log,/helper titlebars setup/);
