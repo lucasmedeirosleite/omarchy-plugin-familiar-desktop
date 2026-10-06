@@ -443,10 +443,19 @@ fn rotated_monitor_geometry_and_missing_second_monitor() {
 fn explicit_activation_centres_from_fresh_geometry_and_minimise_does_not_warp() {
     let clients = [client("0xAAA", "special:minimized")];
     let mut ipc = Fake::default();
-    dock::operate("activate-instance", &s(&["0xAAA"]), &clients, &monitors(), "", &mut ipc).unwrap();
+    dock::operate(
+        "activate-instance",
+        &s(&["0xAAA"]),
+        &clients,
+        &monitors(),
+        "",
+        &mut ipc,
+    )
+    .unwrap();
     let cursor = ipc.calls.last().unwrap();
     assert!(cursor.starts_with("dispatch hl.dsp.cursor.move"));
-    let script = format!(r#"
+    let script = format!(
+        r#"
 local calls = 0
 hl = {{ get_window = function(address)
   assert(address == 'address:0xAAA')
@@ -457,13 +466,26 @@ end, dsp = {{cursor = {{move = function(p)
 end}}}} }}
 {}
 assert(calls == 1)
-"#, cursor.strip_prefix("dispatch ").unwrap());
+"#,
+        cursor.strip_prefix("dispatch ").unwrap()
+    );
     let mut child = std::process::Command::new("lua")
-        .arg("-").stdin(std::process::Stdio::piped()).spawn().unwrap();
+        .arg("-")
+        .stdin(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
     std::io::Write::write_all(child.stdin.as_mut().unwrap(), script.as_bytes()).unwrap();
     drop(child.stdin.take());
     assert!(child.wait().unwrap().success());
     let mut ipc = Fake::default();
-    dock::operate("minimize-instance", &s(&["0xAAA"]), &[client("0xAAA", "2"), client("0xBBB", "2")], &monitors(), "0xAAA", &mut ipc).unwrap();
+    dock::operate(
+        "minimize-instance",
+        &s(&["0xAAA"]),
+        &[client("0xAAA", "2"), client("0xBBB", "2")],
+        &monitors(),
+        "0xAAA",
+        &mut ipc,
+    )
+    .unwrap();
     assert!(!ipc.calls.iter().any(|c| c.contains("cursor.move")));
 }

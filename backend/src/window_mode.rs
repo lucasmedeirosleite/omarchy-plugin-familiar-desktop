@@ -42,7 +42,10 @@ pub fn hook(mode: &str, manifest: &Path) -> Result<String> {
     if mode != "floating" {
         return Err("Choose floating or reset".into());
     }
-    Ok(format!("{BEGIN}-- mode: floating\ndo\n  local plugin = io.open({}, 'r')\n  if plugin then\n    plugin:close()\n    hl.window_rule({{ name = 'familiar-new-windows-floating', match = {{ class = '.*' }}, float = true }})\n  end\nend\n{END}", common::lua(&manifest.to_string_lossy())))
+    Ok(format!(
+        "{BEGIN}-- mode: floating\ndo\n  local plugin = io.open({}, 'r')\n  if plugin then\n    plugin:close()\n    hl.window_rule({{ name = 'familiar-new-windows-floating', match = {{ class = '.*' }}, float = true }})\n  end\nend\n{END}",
+        common::lua(&manifest.to_string_lossy())
+    ))
 }
 
 // Only this stable, guarded include lives in the user's main configuration.
@@ -66,9 +69,7 @@ fn generated_content(paths: &Paths) -> Result<Option<String>> {
                     .iter()
                     .any(|candidate| candidate.as_ref().ok() == Some(&value))
             }) {
-                return Err(
-                    "Familiar's separate window config was edited; no file changed".into(),
-                );
+                return Err("Familiar's separate window config was edited; no file changed".into());
             }
             Ok(Some(value))
         }

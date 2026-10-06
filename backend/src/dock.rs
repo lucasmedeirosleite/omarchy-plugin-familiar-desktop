@@ -697,7 +697,12 @@ fn focus_and_point(ipc: &mut impl DockIpc, addr: &str) -> Result<()> {
     let selector = lua(&format!("address:{addr}"));
     // Query goal geometry after restore/focus, not stale pre-move coordinates.
     // Hyprland uses logical global coordinates, including scaled/negative outputs.
-    dispatch(ipc, format!("dispatch hl.dsp.cursor.move({{ x = hl.get_window({selector}).at.x + hl.get_window({selector}).size.x / 2, y = hl.get_window({selector}).at.y + hl.get_window({selector}).size.y / 2 }})"))
+    dispatch(
+        ipc,
+        format!(
+            "dispatch hl.dsp.cursor.move({{ x = hl.get_window({selector}).at.x + hl.get_window({selector}).size.x / 2, y = hl.get_window({selector}).at.y + hl.get_window({selector}).size.y / 2 }})"
+        ),
+    )
 }
 fn move_window(ipc: &mut impl DockIpc, addr: &str, ws: &str) -> Result<()> {
     if !valid_address(addr) {

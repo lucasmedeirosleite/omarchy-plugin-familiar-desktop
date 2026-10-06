@@ -1,7 +1,7 @@
 use familiar_desktop::{
     Result,
-    window_mode::{self, Paths},
     common::Hypr,
+    window_mode::{self, Paths},
 };
 use std::{
     fs,
@@ -192,3 +192,48 @@ fn incompatible_compositor_keeps_config_unchanged() {
     assert_eq!(fs::read(&p.config).unwrap(), before);
 }
 
+#[test]
+fn owned_generated_file_is_guarded_and_edited_content_is_preserved() {
+    let (_dir, p) = fixture();
+    let mut h = FakeHypr::default();
+    window_mode::change("floating", &p, &mut h).unwrap();
+    let generated = fs::read_to_string(&p.generated).unwrap();
+    assert!(generated.contains("hl.window_rule"));
+    let edited = format!("{generated}\n-- personal edit\n");
+    fs::write(&p.generated, &edited).unwrap();
+    assert!(window_mode::change("reset", &p, &mut h).is_err());
+    assert_eq!(fs::read_to_string(&p.generated).unwrap(), edited);
+}
+
+#[test]
+fn generated_lua_adds_only_opt_in_float_rule_and_stops_after_removal() {
+    let (dir, p) = fixture();
+    let hook = dir.path().join("hook.lua");
+    fs::write(&hook, window_mode::hook("floating", &p.manifest).unwrap()).unwrap();
+    let script = format!(
+        r#"
+local calls = 0
+hl = {{ window_rule = function(rule)
+  assert(rule.name == 'familiar-new-windows-floating')
+  assert(rule.match.class == '.*' and rule.float == true)
+  calls = calls + 1
+end }}
+dofile({})
+assert(calls == 1)
+io.open = function() return nil end
+dofile({})
+assert(calls == 1)
+"#,
+        familiar_desktop::common::lua(&hook.to_string_lossy()),
+        familiar_desktop::common::lua(&hook.to_string_lossy())
+    );
+    let harness = dir.path().join("test.lua");
+    fs::write(&harness, script).unwrap();
+    assert!(
+        std::process::Command::new("lua")
+            .arg(harness)
+            .status()
+            .unwrap()
+            .success()
+    );
+}
