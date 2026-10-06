@@ -298,8 +298,10 @@ fn active_unminimized_window_is_focused_without_move() {
         &mut ipc,
     )
     .unwrap();
-    assert_eq!(ipc.calls.len(), 1);
+    assert_eq!(ipc.calls.len(), 2);
     assert!(ipc.calls[0].contains("hl.dsp.focus"));
+    assert!(ipc.calls[1].contains("hl.dsp.cursor.move"));
+    assert!(ipc.calls[1].contains("address:0xAAA"));
 }
 #[test]
 fn terminal_dock_does_not_swallow_dedicated_cli_windows() {
@@ -399,8 +401,10 @@ fn go_to_window_preserves_workspace_while_bring_here_moves_it() {
         &mut ipc,
     )
     .unwrap();
-    assert_eq!(ipc.calls.len(), 1);
+    assert_eq!(ipc.calls.len(), 2);
     assert!(ipc.calls[0].contains("focus"));
+    assert!(ipc.calls[1].contains("cursor.move"));
+    assert!(!ipc.calls.iter().any(|c| c.contains("hl.dsp.window.move")));
     ipc.calls.clear();
     dock::arrange(
         "bring-here",
@@ -435,4 +439,55 @@ fn rotated_monitor_geometry_and_missing_second_monitor() {
     monitors[0]["scale"] = json!(0);
     assert!(dock::arrange("arrange-left", "0xAAA", &clients, &monitors, &mut ipc).is_err());
     assert!(ipc.calls.is_empty());
+}
+
+#[test]
+fn explicit_activation_centres_from_fresh_geometry_and_minimise_does_not_warp() {
+    let clients = [client("0xAAA", "special:minimized")];
+    let mut ipc = Fake::default();
+    dock::operate(
+        "activate-instance",
+        &s(&["0xAAA"]),
+        &clients,
+        &monitors(),
+        "",
+        &mut ipc,
+    )
+    .unwrap();
+    let cursor = ipc.calls.last().unwrap();
+    assert!(cursor.starts_with("dispatch hl.dsp.cursor.move"));
+    let script = format!(
+        r#"
+local calls = 0
+hl = {{ get_window = function(address)
+  assert(address == 'address:0xAAA')
+  return {{at={{x=-1920,y=100}},size={{x=800,y=600}}}}
+end, dsp = {{cursor = {{move = function(p)
+  assert(p.x == -1520 and p.y == 400)
+  calls = calls + 1
+end}}}} }}
+{}
+assert(calls == 1)
+"#,
+        cursor.strip_prefix("dispatch ").unwrap()
+    );
+    let mut child = std::process::Command::new("lua")
+        .arg("-")
+        .stdin(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+    std::io::Write::write_all(child.stdin.as_mut().unwrap(), script.as_bytes()).unwrap();
+    drop(child.stdin.take());
+    assert!(child.wait().unwrap().success());
+    let mut ipc = Fake::default();
+    dock::operate(
+        "minimize-instance",
+        &s(&["0xAAA"]),
+        &[client("0xAAA", "2"), client("0xBBB", "2")],
+        &monitors(),
+        "0xAAA",
+        &mut ipc,
+    )
+    .unwrap();
+    assert!(!ipc.calls.iter().any(|c| c.contains("cursor.move")));
 }

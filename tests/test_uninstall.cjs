@@ -4,7 +4,7 @@ const os = require('node:os');
 const path = require('node:path');
 const {spawnSync} = require('node:child_process');
 const id = 'io.github.tcballard.familiar-desktop';
-const steps = ['desktop prepare-remove', `plugin disable ${id}`, 'caps-lock reset', 'titlebars remove', `plugin remove ${id} --yes`];
+const steps = ['desktop prepare-remove', `plugin disable ${id}`, 'caps-lock reset', 'window-mode reset', 'titlebars remove', `plugin remove ${id} --yes`];
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-uninstall-'));
 try {
   const installed = path.join(tmp, '.config/omarchy/plugins', id);
@@ -26,5 +26,5 @@ try {
   const wrong = spawnSync('bash', ['uninstall.sh'], {encoding:'utf8', env:{...process.env, HOME:tmp, PATH:mock+':'+process.env.PATH, TEST_LOG:log}});
   assert.notEqual(wrong.status,0);
   assert.equal(fs.readFileSync(log,'utf8'),'');
-  console.log('uninstall sequencing, failure stops and checkout identity: 7 scenarios passed');
+  console.log('uninstall sequencing, failure stops and checkout identity: 8 scenarios passed');
 } finally { fs.rmSync(tmp, {recursive:true, force:true}); }

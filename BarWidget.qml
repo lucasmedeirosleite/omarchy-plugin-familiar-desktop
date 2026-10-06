@@ -47,7 +47,10 @@ BarWidget {
   property bool widgetsEnabled: true
   readonly property bool settingsOpen: settingsWindow.open
   onSettingsOpenChanged: {
-    if (settingsOpen && desktopService && desktopService.capsLock) desktopService.capsLock.run("status")
+    if (settingsOpen && desktopService) {
+      if (desktopService.capsLock) desktopService.capsLock.run("status")
+      if (desktopService.windowMode) desktopService.windowMode.run("status")
+    }
   }
   property bool isSavingSettings: false
 
@@ -473,6 +476,12 @@ BarWidget {
           }
         }
 
+        WindowModeSettings {
+          visible: settingsWindow.page === "windows"
+          Layout.fillWidth: true
+          controller: root.desktopService ? root.desktopService.windowMode : null
+        }
+
         CapsLockSettings {
           visible: settingsWindow.page === "keyboard"
           Layout.fillWidth: true
@@ -558,8 +567,8 @@ BarWidget {
               cursorShape: Qt.PointingHandCursor
               onClicked: {
                 // Copy literal text via argv. Setup runs in the user's terminal,
-                // outside the shell, because hyprpm may require interactive setup.
-                var installer = Qt.resolvedUrl("install.sh").toString().replace(/^file:\/\//, "")
+                // outside the shell, so failures remain visible and retryable.
+                var installer = Qt.resolvedUrl("repair.sh").toString().replace(/^file:\/\//, "")
                 var command = "bash " + DockCommands.quote(installer) + " " + DockCommands.quote(root.titlebarStyle)
                 DockCommands.run(Util, ["wl-copy", "--", command])
                 root.titlebarStatusText = "Copied — run in your terminal"

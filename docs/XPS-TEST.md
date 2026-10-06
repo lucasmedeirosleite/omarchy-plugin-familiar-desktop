@@ -1,6 +1,6 @@
-# Familiar v0.1.0 final candidate — XPS acceptance
+# Familiar v0.1.1 candidate — XPS acceptance
 
-This is the v0.1.0 desktop candidate. Automated tests use fixtures; this checklist records actual Omarchy/Hyprland behavior. The curated app collection and Open/Install shortcuts are deferred to v0.2.0. This candidate does not include a Windows taskbar redesign or macOS window previews.
+This is the v0.1.1 desktop candidate. First complete the new preference, pointer focus, upgrade and repair checks in [RELEASE-0.1.1.md](RELEASE-0.1.1.md), then run the core checks below. Automated tests use fixtures; this checklist records actual Omarchy/Hyprland behavior. The curated app collection and Open/Install shortcuts are deferred to v0.2.0. This candidate does not include a Windows taskbar redesign or macOS window previews.
 
 ## Install
 

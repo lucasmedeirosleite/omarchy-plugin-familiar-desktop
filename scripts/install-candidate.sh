@@ -48,7 +48,7 @@ git -C "$plugin_dir" fetch --no-tags "$repository" "$candidate_sha"
 previous_sha="$(git -C "$plugin_dir" rev-parse HEAD)"
 printf 'Testing %s (%s). Previous checkout: %s\n' "$candidate_version" "$candidate_sha" "$previous_sha"
 # Recover any windows hidden by an earlier candidate before disabling its service.
-if [[ -x "$plugin_dir/bin/familiar-desktop" ]] && [[ "$("$plugin_dir/bin/familiar-desktop" --version)" == *0.1.0* ]]; then
+if [[ -x "$plugin_dir/bin/familiar-desktop" ]] && [[ "$("$plugin_dir/bin/familiar-desktop" --version)" == *0.1.* ]]; then
   "$plugin_dir/bin/familiar-desktop" desktop restore
   "$plugin_dir/bin/familiar-desktop" titlebars disable
 fi

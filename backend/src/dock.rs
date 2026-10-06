@@ -692,6 +692,18 @@ fn focus(ipc: &mut impl DockIpc, addr: &str) -> Result<()> {
         ),
     )
 }
+fn focus_and_point(ipc: &mut impl DockIpc, addr: &str) -> Result<()> {
+    focus(ipc, addr)?;
+    let selector = lua(&format!("address:{addr}"));
+    // Query goal geometry after restore/focus, not stale pre-move coordinates.
+    // Hyprland uses logical global coordinates, including scaled/negative outputs.
+    dispatch(
+        ipc,
+        format!(
+            "dispatch hl.dsp.cursor.move({{ x = hl.get_window({selector}).at.x + hl.get_window({selector}).size.x / 2, y = hl.get_window({selector}).at.y + hl.get_window({selector}).size.y / 2 }})"
+        ),
+    )
+}
 fn move_window(ipc: &mut impl DockIpc, addr: &str, ws: &str) -> Result<()> {
     if !valid_address(addr) {
         return Err("Invalid window address".into());
@@ -822,8 +834,8 @@ pub fn operate(
             return Ok(true);
         }
         move_window(ipc, addr, ws)?;
-        focus(ipc, addr)?;
         close_special(ipc, monitors)?;
+        focus_and_point(ipc, addr)?;
     } else if minimize || toggle {
         move_window(ipc, addr, "special:minimized")?;
         close_special(ipc, monitors)?;
@@ -840,7 +852,7 @@ pub fn operate(
             focus(ipc, address(next))?;
         }
     } else {
-        focus(ipc, addr)?;
+        focus_and_point(ipc, addr)?;
     }
     Ok(true)
 }
@@ -870,10 +882,10 @@ pub fn arrange(
             .filter(|s| !s.is_empty() && !s.starts_with("special:"))
             .ok_or("No regular workspace")?;
         move_window(ipc, addr, ws)?;
-        return focus(ipc, addr);
+        return focus_and_point(ipc, addr);
     }
     if mode == "go-window" {
-        return focus(ipc, addr);
+        return focus_and_point(ipc, addr);
     }
     if hidden(c) {
         return Err("Restore this window before arranging it".into());

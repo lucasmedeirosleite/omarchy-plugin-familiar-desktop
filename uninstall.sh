@@ -18,7 +18,8 @@ trap 'echo "Familiar removal stopped. The plugin has not been intentionally dele
 "$helper" desktop prepare-remove
 omarchy plugin disable "$plugin_id"
 "$helper" caps-lock reset
+"$helper" window-mode reset
 "$helper" titlebars remove
-# Only delete the plugin after both hooks are removed and reload is verified.
+# Only delete the plugin after owned hooks are removed and reload is verified.
 omarchy plugin remove "$plugin_id" --yes
 echo 'Familiar removed. Personal configuration is preserved; preferences and recovery backups are retained.'

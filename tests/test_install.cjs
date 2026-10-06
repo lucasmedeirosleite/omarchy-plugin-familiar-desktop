@@ -5,12 +5,13 @@ const os = require('node:os');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const {spawnSync} = require('node:child_process');
-const installer = path.resolve(__dirname, '../install.sh');
+const template = fs.readFileSync(path.resolve(__dirname, '../install.sh'), 'utf8');
 const sourceSha = 'bda1ec617966b11fb8470788c74019350b38838f';
 let passed = 0;
 function run({existing=false, dirty=false, repair=false, failRepair=false, missing=false, style='mac', fault='', arch='x86_64', noCompiler=false, badAbi=false, titlebarFault='', lifecycle='', oldVersion='0.1.0', ignored='' }={}) {
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'familiar-install-'));
  try {
+  const installer=path.join(root,'install.sh');fs.writeFileSync(installer,template.replace('@SOURCE_SHA@',sourceSha));
   const bin=path.join(root,'bin');fs.mkdirSync(bin);
   const plugin=path.join(root,'.config/omarchy/plugins/io.github.tcballard.familiar-desktop');
   const fixture=path.join(root,'fixture');fs.mkdirSync(path.join(fixture,'.git'),{recursive:true});fs.mkdirSync(path.join(fixture,'bin'));
@@ -52,7 +53,7 @@ for(const fault of ['download','corrupt','duplicate','version']){
 }
 r=run({existing:true,arch:'aarch64'});assert.notEqual(r.status,0);assert.equal(r.binary,'previous backend');assert.match(r.stderr,/Linux x86_64/);assert.doesNotMatch(r.log,/curl|plugin enable/);passed++;
 // The settings repair action must use the release installer, never a source build.
-const widget=fs.readFileSync(path.resolve(__dirname,'../BarWidget.qml'),'utf8');assert.match(widget,/Qt.resolvedUrl\("install.sh"\)/);assert.doesNotMatch(widget,/Qt.resolvedUrl\("build.sh"\)/);
+const widget=fs.readFileSync(path.resolve(__dirname,'../BarWidget.qml'),'utf8');assert.match(widget,/Qt.resolvedUrl\("repair.sh"\)/);assert.doesNotMatch(widget,/Qt.resolvedUrl\("build.sh"\)/);
 console.log(`${passed} installer scenarios passed (mock host; real SHA-256 verification).`);
 
 for(const options of [{badAbi:true},{titlebarFault:'corrupt'},{titlebarFault:'download'},{repair:true}]) {
