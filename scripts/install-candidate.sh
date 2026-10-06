@@ -62,9 +62,21 @@ mv "$plugin_dir/bin/.familiar-desktop.candidate" "$plugin_dir/bin/familiar-deskt
 install -m 644 "$bundle_dir/hyprbars-linux-x86_64-$abi.so" "$plugin_dir/bin/hyprbars/$abi/.hyprbars.candidate.so"
 mv "$plugin_dir/bin/hyprbars/$abi/.hyprbars.candidate.so" "$plugin_dir/bin/hyprbars/$abi/hyprbars.so"
 "$plugin_dir/bin/familiar-desktop" titlebars setup --library "$plugin_dir/bin/hyprbars/$abi/hyprbars.so" --enable --style "$style"
+# Enabling rewrites plugin files, so the shell briefly unloads the plugin while it
+# reloads. Retry until its IPC target is back; fail if it never returns.
+shell_call() {
+  local attempt output
+  for attempt in {1..25}; do
+    if output="$(omarchy-shell "$plugin_id" "$@" 2>&1)"; then [[ -z "$output" ]] || printf '%s\n' "$output"; return 0; fi
+    sleep 0.2
+  done
+  printf '%s\n' "$output" >&2
+  echo "Familiar did not respond to '$*' after enabling; the shell may still be reloading." >&2
+  return 1
+}
 omarchy plugin enable "$plugin_id"
-omarchy-shell "$plugin_id" refresh
-omarchy-shell "$plugin_id" refreshTitlebars
+shell_call refresh
+shell_call refreshTitlebars
 printf '\nFamiliar %s installed for testing. Open the computer icon in the bar.\nRead XPS-TEST.md in this bundle. Previous source: %s\n' "$candidate_version" "$previous_sha"
 
 printf '\nRestart the shell to load updated UI components: omarchy restart shell\n'
