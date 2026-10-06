@@ -212,4 +212,44 @@ overwritten. See [the Caps Lock guide](docs/CAPS-LOCK.md) for recovery and testi
 
 ## v0.1.1 in preparation
 
-The next candidate adds opt-in floating windows, pointer centring on dock activation, and repair without fetching source. See [candidate notes](docs/v0.1.1.md), [test/release gates](docs/RELEASE-0.1.1.md) and the [teaser audit](docs/VIDEO-AUDIT-0.1.1.md). It is not published; the installation command above still installs stable v0.1.0. The repository `install.sh` is now a CI template; use the generated candidate bundle for testing.
+v0.1.1 candidates add window modes, pointer centring on dock activation, and repair without fetching source. See [candidate notes](docs/v0.1.1.md), [test/release gates](docs/RELEASE-0.1.1.md) and the [teaser audit](docs/VIDEO-AUDIT-0.1.1.md). The installation command above still installs stable v0.1.0; use a published prerelease bundle for candidate testing. The repository `install.sh` is now a CI template; use the generated candidate bundle for testing.
+
+### Next v0.1.1 input changes (after rc.1)
+
+Settings → Input offers **Command / Option / Control** or **Super / Alt / Ctrl**
+labels. This changes Familiar’s shortcut display and search, not keybindings;
+copyable Lua still uses Hyprland’s canonical modifier names.
+
+Trackpad gestures are opt-in, with workspace-only, desktop-only and combined
+choices: three-finger horizontal swipes switch workspaces; four fingers down
+shows the desktop and four fingers up restores windows. Hyprland-reported
+conflicts roll back the choice rather than deleting an existing gesture. Choose
+Desktop only if your workspace swipes are already configured. Use configuration
+removes Familiar’s owned gesture file and include. Existing touchpad tap and
+natural-scroll preferences are retained. Two-finger right-click taps require
+that setting in your system configuration. Smooth scrolling over an app with
+multiple windows cycles those windows, with accumulated motion to avoid jumping
+on every small trackpad event.
+
+These changes are not in rc.1. Live XPS gesture recognition, sensitivity and
+conflict/reload behaviour still need testing before the next release candidate.
+
+### Mouse resizing, desktop modes and Command behaviour (rc.2)
+
+Windows → **Enable border dragging** lets you resize at window edges/corners
+without holding a key. **Floating** and **Tiling** now switch already open eligible
+windows across regular workspaces as well as setting the policy for new windows.
+Fullscreen, pinned, grouped and hidden windows are skipped. Hyprland retains
+control of its tiling layout and keyboard shortcuts; individual failed actions
+are reported and can be retried by selecting the mode again.
+
+Input → **Command editing shortcuts** is separate from shortcut labels. It
+explicitly replaces Super+C/V/X/A/Z and Super+Shift+Z until reset. GUI apps receive
+Ctrl editing shortcuts; known terminals receive Ctrl+Shift+C/V for copy/paste
+and pass through the other aliases. Supported terminal identities include Kitty,
+Alacritty, Foot, WezTerm, Ghostty, GNOME Terminal, Konsole, XTerm, URxvt, st,
+Terminator and Tilix. Custom terminal classes require review before enabling.
+This is scoped editing support, not a global modifier swap or full macOS emulation.
+
+Both preferences are opt-in, reversible from **Use configuration**, and removed
+by uninstall. Existing title bars remain optional within the integrated plugin.

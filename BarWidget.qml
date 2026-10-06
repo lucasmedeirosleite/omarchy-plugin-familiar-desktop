@@ -9,6 +9,7 @@ import qs.Ui
 import "DockSettings.js" as DockSettings
 import "DockWidgets.js" as DockWidgets
 import "DockCommands.js" as DockCommands
+import "ShortcutLabels.js" as ShortcutLabels
 import "components"
 
 BarWidget {
@@ -18,6 +19,7 @@ BarWidget {
   property string settingsPath: Quickshell.env("HOME") + "/.config/omarchy/familiar-desktop-settings.json"
   property var shell: root.bar ? root.bar.shell : null
   property string profile: "general"
+  property string shortcutLabels: "standard"
   property bool fileShortcutsEnabled: false
   property bool dockEnabled: true
   property string dockSize: "default"
@@ -49,6 +51,9 @@ BarWidget {
   onSettingsOpenChanged: {
     if (settingsOpen && desktopService) {
       if (desktopService.capsLock) desktopService.capsLock.run("status")
+      if (desktopService.borderResize) desktopService.borderResize.run("status")
+      if (desktopService.commandShortcuts) desktopService.commandShortcuts.run("status")
+      if (desktopService.gestures) desktopService.gestures.run("status")
       if (desktopService.windowMode) desktopService.windowMode.run("status")
     }
   }
@@ -94,6 +99,7 @@ BarWidget {
         root.fileShortcutsEnabled = s.fileShortcutsEnabled === true
         var normalized = DockSettings.normalize(s)
         root.profile = normalized.profile
+        root.shortcutLabels = ShortcutLabels.normalize(s.shortcutLabels)
         root.dockPosition = normalized.dockPosition
         root.dockSize = normalized.dockSize
         root.titlebarSize = normalized.titlebarSize
@@ -153,6 +159,7 @@ BarWidget {
 
     s.dockEnabled = root.dockEnabled
     s.profile = root.profile
+    s.shortcutLabels = root.shortcutLabels
     s.dockPosition = root.dockPosition
     s.dockSize = root.dockSize
     s.titlebarSize = root.titlebarSize
@@ -445,6 +452,7 @@ BarWidget {
           visible: settingsWindow.page === "help"
           Layout.fillWidth: true
           tools: root.desktopTools
+          labelStyle: root.shortcutLabels
         }
         Repeater {
           model: [{key: "dockSize", label: "Dock and icons"}, {key: "titlebarSize", label: "Title bars and buttons"}]
@@ -476,10 +484,65 @@ BarWidget {
           }
         }
 
+        InputPreferenceSettings {
+          visible: settingsWindow.page === "windows"
+          Layout.fillWidth: true
+          controller: root.desktopService ? root.desktopService.borderResize : null
+          title: "Resize with the mouse"
+          explanation: "Drag a window edge or corner to resize, without holding a modifier key. Adds a 15-pixel grab area and resize cursor. Tiled resizing follows your Hyprland layout; floating windows resize freely. Use configuration restores your original settings."
+          enableLabel: "Enable border dragging"
+        }
+
         WindowModeSettings {
           visible: settingsWindow.page === "windows"
           Layout.fillWidth: true
           controller: root.desktopService ? root.desktopService.windowMode : null
+          labelStyle: root.shortcutLabels
+        }
+
+        ColumnLayout {
+          visible: settingsWindow.page === "keyboard"
+          Layout.fillWidth: true
+          Text {
+            text: "Shortcut labels"
+            textFormat: Text.PlainText
+            font.family: Style.font.family
+            color: Color.popups.text
+          }
+          Repeater {
+            model: [{key: "standard", label: "Super / Alt / Ctrl"}, {key: "mac", label: "Command / Option / Control"}]
+            delegate: ActionButton {
+              required property var modelData
+              Layout.fillWidth: true
+              text: modelData.label
+              selected: root.shortcutLabels === modelData.key
+              onClicked: { root.shortcutLabels = modelData.key; root.saveSettings() }
+            }
+          }
+          Text {
+            Layout.fillWidth: true
+            text: "Changes the names shown in Familiar. Your keybindings and copyable configuration stay the same."
+            textFormat: Text.PlainText
+            wrapMode: Text.WordWrap
+            font.family: Style.font.family
+            font.pixelSize: 12
+            color: Color.popups.text
+          }
+        }
+
+        InputPreferenceSettings {
+          visible: settingsWindow.page === "keyboard"
+          Layout.fillWidth: true
+          controller: root.desktopService ? root.desktopService.commandShortcuts : null
+          title: "Command editing shortcuts"
+          explanation: "Opt-in: replaces Super+C/V/X/A/Z and Super+Shift+Z with copy, paste, cut, select all, undo and redo. Other desktop shortcuts stay as configured. Known terminals (including Kitty, Alacritty, Foot, WezTerm and Ghostty) use Ctrl+Shift+C/V; other editing aliases pass through there. Custom terminal classes may need support before enabling. This changes behaviour independently of the label preference. Use configuration restores the original bindings."
+          enableLabel: "Enable Command editing shortcuts"
+        }
+
+        GesturesSettings {
+          visible: settingsWindow.page === "keyboard"
+          Layout.fillWidth: true
+          controller: root.desktopService ? root.desktopService.gestures : null
         }
 
         CapsLockSettings {

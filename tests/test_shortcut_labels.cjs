@@ -1,0 +1,14 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const labels = {};
+vm.createContext(labels);
+vm.runInContext(fs.readFileSync('ShortcutLabels.js', 'utf8').replace(/^\.pragma library\s*/, ''), labels);
+assert.equal(labels.format('Super + Ctrl + Alt + Shift + Return', 'mac'), 'Command + Control + Option + Shift + Return');
+assert.equal(labels.format('Super + Alt_L', 'mac'), 'Command + Alt_L');
+assert.equal(labels.format('Alt', 'mac'), 'Alt');
+assert.equal(labels.format('Super + code:42', 'standard'), 'Super + code:42');
+assert.equal(labels.format('Super + Return', 'unknown'), 'Super + Return');
+assert.equal(labels.matches('Super + Return', 'Open terminal', 'command', 'mac'), true);
+assert.equal(labels.matches('Super + Return', 'Open terminal', 'super', 'mac'), true);
+console.log('shortcut modifier labels and search: passed');

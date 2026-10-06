@@ -7,3 +7,7 @@ pub mod caps_lock;
 pub mod desktop;
 
 pub mod window_mode;
+
+pub mod gestures;
+
+pub mod input_preferences;

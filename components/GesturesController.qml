@@ -9,30 +9,29 @@ Item {
     property string mode: ""
     property string message: ""
     function run(choice) {
-        if (busy || ["status", "floating", "tiling", "reset"].indexOf(choice) < 0) return false
+        if (busy || ["status", "all", "workspace", "desktop", "reset"].indexOf(choice) < 0) return false
         message = ""
-        adapter.command = choice === "floating" || choice === "tiling"
-            ? [helper, "window-mode", "switch", choice] : [helper, "window-mode", choice]
+        adapter.command = [helper, "gestures", choice]
         adapter.running = true
         return true
     }
     Process {
         id: adapter
-        objectName: "windowModeAdapter"
+        objectName: "gesturesAdapter"
         stdout: StdioCollector { id: output; waitForEnd: true }
         onExited: function(code, status) {
             try {
                 var result = JSON.parse(output.text)
-                if (code !== 0 || result.state !== "ok" || ["floating", "tiling", "reset"].indexOf(result.mode) < 0) {
+                if (code !== 0 || result.state !== "ok" || ["all", "workspace", "desktop", "reset"].indexOf(result.mode) < 0) {
                     root.mode = ""
-                    root.message = String(result.message || "Could not read or apply window mode preference.").slice(0, 300)
+                    root.message = String(result.message || "Could not read or apply trackpad preference.").slice(0, 300)
                     return
                 }
                 root.mode = result.mode
                 root.message = String(result.message || "").slice(0, 300)
             } catch (e) {
                 root.mode = ""
-                root.message = "Could not read window mode preference. Check the installed Familiar backend."
+                root.message = "Could not read trackpad preference. Check the installed Familiar backend."
             }
         }
     }
