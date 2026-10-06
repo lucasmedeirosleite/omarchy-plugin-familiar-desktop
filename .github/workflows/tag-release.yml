@@ -1,6 +1,11 @@
 name: Tag verified release
 on:
   workflow_dispatch:
+    inputs:
+      rc_number:
+        description: "RC number (for example 1); leave empty for a final tag only"
+        required: false
+        type: string
 permissions:
   contents: write
   actions: read
@@ -20,6 +25,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           SOURCE_SHA: ${{ github.sha }}
+          RC_NUMBER: ${{ inputs.rc_number }}
         shell: bash
         run: |
           set -euo pipefail
@@ -35,6 +41,11 @@ jobs:
           version="$(jq -r .version manifest.json)"
           [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
           tag="v$version"
+          if [[ -n "$RC_NUMBER" ]]; then
+            [[ "$RC_NUMBER" =~ ^[1-9][0-9]*$ ]]
+            tag="$tag-rc.$RC_NUMBER"
+            test -f "docs/$tag.md"
+          fi
           git fetch origin --tags
           if git show-ref --verify --quiet "refs/tags/$tag"; then
             echo "Tag $tag already exists; refusing to replace it." >&2
@@ -42,5 +53,31 @@ jobs:
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if [[ -n "$RC_NUMBER" ]]; then
+            run_id="$(jq -r --arg sha "$SOURCE_SHA" '[.workflow_runs[] | select(.path == ".github/workflows/release.yml" and .head_sha == $sha)] | sort_by(.id) | last | .id' /tmp/release-runs.json)"
+            gh run download "$run_id" --name familiar-desktop-release --dir /tmp/familiar-rc-assets
+            (cd /tmp/familiar-rc-assets && sha256sum --check --strict SHA256SUMS)
+            jq -e --arg sha "$SOURCE_SHA" --arg version "$version" '.source.commit == $sha and .version == $version' /tmp/familiar-rc-assets/RELEASE-MANIFEST.json
+            jq -e --arg sha "$SOURCE_SHA" '.source.commit == $sha' /tmp/familiar-rc-assets/SOURCE-MANIFEST.json
+            grep -Fx "candidate_sha='$SOURCE_SHA'" /tmp/familiar-rc-assets/install-candidate.sh
+            grep -Fx "release_sha='$SOURCE_SHA'" /tmp/familiar-rc-assets/install.sh
+            chmod u+x /tmp/familiar-rc-assets/familiar-desktop-linux-x86_64
+            test "$(/tmp/familiar-rc-assets/familiar-desktop-linux-x86_64 --version)" = "familiar-desktop $version"
+            bundle="familiar-$tag-linux-x86_64.zip"
+            (cd /tmp/familiar-rc-assets && zip -q "/tmp/$bundle" *)
+            (cd /tmp && sha256sum "$bundle" > "$bundle.sha256")
+            cp "docs/$tag.md" /tmp/familiar-rc-notes.md
+            printf '\nExact source: \x60%s\x60. [Verified main build](https://github.com/%s/actions/runs/%s).\n' "$SOURCE_SHA" "$GH_REPO" "$run_id" >> /tmp/familiar-rc-notes.md
+            git tag -a "$tag" "$SOURCE_SHA" -m "Familiar $tag; verified main $SOURCE_SHA"
+            git push origin "refs/tags/$tag"
+            gh release create "$tag" --verify-tag --draft --prerelease --title "$tag" --notes-file /tmp/familiar-rc-notes.md "/tmp/$bundle" "/tmp/$bundle.sha256"
+            gh release download "$tag" --dir /tmp/familiar-rc-download
+            (cd /tmp/familiar-rc-download && sha256sum --check --strict "$bundle.sha256")
+            cmp "/tmp/$bundle" "/tmp/familiar-rc-download/$bundle"
+            gh release edit "$tag" --draft=false --prerelease --latest=false
+            curl --fail --location --proto '=https' --proto-redir '=https' --retry 3 --max-time 180 "https://github.com/$GH_REPO/releases/download/$tag/$bundle" -o /tmp/familiar-public-rc.zip
+            cmp "/tmp/$bundle" /tmp/familiar-public-rc.zip
+          else
           git tag -a "$tag" "$SOURCE_SHA" -m "Familiar $tag; verified main $SOURCE_SHA"
           git push origin "refs/tags/$tag"
+          fi
